@@ -19,6 +19,7 @@ import Loader from "../../LoadingScreen/AnimatedLoader";
 const IRItemsScreen = ({ route }) => {
   const navigation = useNavigation();
   const uuid = route?.params?.uuid || null;
+
   const [irItems, setIrItems] = useState([]);
   const [filteredItems, setFilteredItems] = useState([]);
   const [loading, setLoading] = useState(true);

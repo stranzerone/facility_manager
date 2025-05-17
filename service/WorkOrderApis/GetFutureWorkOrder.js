@@ -33,8 +33,9 @@ console.log("this is future work order api")
         from:fromDate,
         to: toDate,
         self_assigned:"true",
-        future_wo:"true"
     };
+    console.log(params,'this is params')
+
 
     const headers = {
       'Content-Type': 'application/json',

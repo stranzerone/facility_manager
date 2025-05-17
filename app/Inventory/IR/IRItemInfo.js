@@ -10,9 +10,6 @@ import { GetIssueInfo } from "../../../service/Inventory/GetIssueInfo";
 import * as FileSystem from 'expo-file-system'; // For downloading files
 import ImageViewing from "react-native-image-viewing";
 import Loader from "../../LoadingScreen/AnimatedLoader"
-import * as Sharing from 'expo-sharing';
-import { Alert, Platform } from 'react-native';
-
 const IRDetailScreen = ({ route, navigation }) => {
   const { uuid, issueUuid } = route.params;
   const [isLoading, setIsLoading] = useState(false);
@@ -30,7 +27,6 @@ const IRDetailScreen = ({ route, navigation }) => {
   const fetchItemInfo = async () => {
     setLoading(true);
     try {
-
       const response = await GetIssueInfo(issueUuid);
       const allData = response.data;
       setFullData(allData);
@@ -43,32 +39,6 @@ const IRDetailScreen = ({ route, navigation }) => {
 
     }
   };
-
-
-  const handleDownloadPDF = async (url) => {
-  try {
-    const fileName = url.split('/').pop();
-    const fileUri = FileSystem.documentDirectory + fileName;
-
-    const downloadResumable = FileSystem.createDownloadResumable(
-      url,
-      fileUri
-    );
-
-    const { uri } = await downloadResumable.downloadAsync();
-
-    if (Platform.OS === 'ios' || await Sharing.isAvailableAsync()) {
-      await Sharing.shareAsync(uri);
-    } else {
-      Alert.alert('Download Complete', `Saved to: ${uri}`);
-    }
-
-  } catch (error) {
-    console.error('Download error:', error);
-    Alert.alert('Error', 'Could not download the PDF.');
-  }
-};
-
 
   useFocusEffect(
     React.useCallback(() => {
@@ -125,14 +95,13 @@ const IRDetailScreen = ({ route, navigation }) => {
   return  <Loader  />
   }
 
-  console.log(issue["Total Amount"],'this are issue')
   return (
     <View className="flex-1 bg-white pb-32">
       <ScrollView className="px-4" style={{ paddingBottom: 200 }}>
         {/* Header */}
         <View className="mb-6 border-b border-gray-200 pb-4">
           <View className="flex-row justify-between items-center mb-1">
-            <Text className="text-xl font-bold text-[#074B7C]">Issue Request Detail</Text>
+            <Text className="text-2xl font-bold text-[#074B7C]">Issue Request Detail</Text>
             <View className="px-3 py-1 bg-[#E0F2FE] rounded-full">
               <Text className="text-[#0284C7] text-sm font-semibold">{issue?.Status || "Unknown"}</Text>
             </View>
@@ -154,48 +123,32 @@ const IRDetailScreen = ({ route, navigation }) => {
         )}
 
         {/* Attachments Section */}
-
-{issue?.attachments && issue.attachments.length > 0 && (
+        {issue?.attachments && issue.attachments.length > 0 && (
   <View className="mb-6">
     <SectionTitle icon="paperclip" title="Attachments" />
-    <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-start' }}>
+    <View className="flex-row flex-wrap justify-start">
       {issue.attachments.map((attachment, index) => {
-        const isImage = attachment.match(/\.(jpg|jpeg|png|gif|webp)$/i);
-        const isPDF = attachment.match(/\.pdf$/i);
-
+        const isImage = attachment.match(/\.(jpg|jpeg|png|gif)$/i);
         return (
           <View
             key={index}
+            className="mt-4"
             style={{
-              flexBasis: '20%',       // 5 items per row
-              alignItems: 'center',
-              marginVertical: 6,
-              paddingHorizontal: 4,
+              width: '33%', // Default for 3 items per row
+              minWidth: '25%', // Min width per item
+              maxWidth: '40%', // Max width per item
+              paddingHorizontal: 4, // Optional padding between images
             }}
           >
             {isImage ? (
               <TouchableOpacity onPress={() => { setSelectedImage(attachment); setModalVisible(true); }}>
                 <Image
                   source={{ uri: attachment }}
-                  style={{ width: 60, height: 60, borderRadius: 6 }}
+                  style={{ width: '100%', height: 100, borderRadius: 8 }}
                 />
               </TouchableOpacity>
-            ) : isPDF ? (
-<TouchableOpacity onPress={() => handleDownloadPDF(attachment)}>
-                  <View style={{ alignItems: 'center' }}>
-                  <FontAwesome name="file-pdf-o" size={32} color="#e53e3e" />
-                  <Text
-                    style={{ fontSize: 10, textAlign: 'center', marginTop: 2 }}
-                    numberOfLines={1}
-                  >
-                    {attachment.split('/').pop()}
-                  </Text>
-                </View>
-              </TouchableOpacity>
             ) : (
-              <Text style={{ fontSize: 10, color: '#888', textAlign: 'center' }}>
-                Unsupported File
-              </Text>
+              <Text className="text-gray-500">File: {attachment}</Text>
             )}
           </View>
         );
@@ -209,9 +162,9 @@ const IRDetailScreen = ({ route, navigation }) => {
         <View className="flex-row flex-wrap justify-between mb-6">
           <InfoBox label="Total Quantity" value={issue["Total Quantity"]?.toString() || "0"} icon="sort-numeric-asc" />
           <InfoBox label="Total Item" value={issue['Total Item'] || "Unknown"} icon="circle" />
-          <InfoBox label="Total Price" value={issue["Total Price"]} icon="tag" />
-          <InfoBox label="Total Tax" value={issue["Total Tax"]} icon="percent" />
-          <InfoBox label="Total Amount" value={issue["Total Amount"]} icon="money" />
+          <InfoBox label="Total Price" value={formatCurrency(issue["Total Price"])} icon="tag" />
+          <InfoBox label="Total Tax" value={formatCurrency(issue["Total Tax"])} icon="percent" />
+          <InfoBox label="Total Amount" value={formatCurrency(issue["Total Amount"])} icon="money" />
         </View>
 
         {/* Item Details */}
@@ -236,12 +189,12 @@ const IRDetailScreen = ({ route, navigation }) => {
 
                 <View className="flex-row justify-between mb-2">
                   <ItemInfo label="Price" value={formatCurrency(it.Price)} />
-                  <ItemInfo align={"right"} label="Total Price" value={it["Total Price"]} />
+                  <ItemInfo align={"right"} label="Total Price" value={it.TotalPrice} />
                 </View>
 
                 <View className="flex-row justify-between">
                   <ItemInfo label="Amount" value={it.Amount} />
-                  <ItemInfo align={"right"} label="Total Amount" value={(parseFloat(it["Total Price"] * it.Quantity).toFixed(2))} />
+                  <ItemInfo align={"right"} label="Total Amount" value={(parseFloat(it.TotalPrice * it.Quantity).toFixed(2))} />
                 </View>
               </View>
             ))

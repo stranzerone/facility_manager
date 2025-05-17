@@ -19,7 +19,8 @@ import DynamicPopup from '../DynamivPopUps/DynapicPopUpScreen';
 import { submitWorkOrder } from '../../service/AddWorkOrderApis/CreateWorkOrderApi';
 import { useNavigation } from '@react-navigation/native';
 import GetAssets from '../../service/AddWorkOrderApis/FetchAssests';
-
+import NetInfo from '@react-native-community/netinfo';
+import { addToQueue } from '../../offline/fileSystem/fileOperations';
 const AddWorkOrderScreen = ({screen,type,uuid}) => {
   const [name, setName] = useState('');
   const [dueDate, setDueDate] = useState(null);
@@ -56,6 +57,8 @@ const [workOrderType, setWorkOrderType] = useState("workorder");
 
   const handleSubmit = async() => {
     setButtonLoading(true)
+    const state = await NetInfo.fetch();
+
     const workOrderData = {
       name,
       dueDate,
@@ -75,6 +78,9 @@ const [workOrderType, setWorkOrderType] = useState("workorder");
         return;
       }
      
+      if (!state.isConnected) {
+        await addToQueue(workOrderData,'workorder')
+      }
     const response =  await submitWorkOrder(workOrderData);
     if(response.status == "success"){
       setPopupType('success');

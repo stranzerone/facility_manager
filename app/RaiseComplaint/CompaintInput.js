@@ -15,15 +15,14 @@ import {
   Alert,
 } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
 import { GetComplaintLocations } from '../../service/ComplaintApis/GetComplaintLocations';
-import { ComplaintImageUploadApi } from '../../service/ComplaintApis/ComplaintImageUpload';
 import { CreateComplaintApi } from '../../service/ComplaintApis/CreateComplaintApi';
 import { CommonActions, useNavigation } from '@react-navigation/native';
 import DynamicPopup from "../DynamivPopUps/DynapicPopUpScreen"
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as FileSystem from 'expo-file-system';
-
+import NetInfo from '@react-native-community/netinfo';
+import { addToQueue } from '../../offline/fileSystem/fileOperations';
 const NewComplaintPage = ({ route }) => {
   const { subCategory,category } = route.params;
   
@@ -125,6 +124,8 @@ const NewComplaintPage = ({ route }) => {
   
   const submitComplaint = async () => {
     setLoading(true); // Show loader during API request
+    const state = await NetInfo.fetch();
+    
     setPopupVisible(false); // Ensure popup is hidden before submission
   
     const data = {
@@ -143,7 +144,14 @@ const NewComplaintPage = ({ route }) => {
     }else{
   
     try {
-      const response = await CreateComplaintApi(data);
+          let response;
+           
+            if (!state.isConnected) {
+             response =  await addToQueue(data,'complaint')
+            }else{
+               response = await CreateComplaintApi(data);
+
+            }
   
       if (response.status === 'success') {
         setPopupType('success');

@@ -9,6 +9,9 @@ import MainNavigation from './MainNavigation.js';
 import NfcManager from 'react-native-nfc-manager';
 import initializeOneSignal from './utils/GlobalFunctions/PushNotifications.js';
 import DynamicPopup from './app/DynamivPopUps/DynapicPopUpScreen.js';
+import NetInfo from '@react-native-community/netinfo';
+import { syncQueuedComplaints, syncQueuedWorkOrders } from './offline/fileSystem/syncFiles.js';
+
 NfcManager.start();
 
 const App = () => {
@@ -18,7 +21,27 @@ const App = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [modalMessage, setModalMessage] = useState('');
   const [modelType, setModelType] = useState('warning');
+
   useEffect(() => {
+    // Initial sync on mount
+    syncQueuedWorkOrders();
+    syncQueuedComplaints();
+
+    // Sync on reconnect
+    const unsubscribe = NetInfo.addEventListener(state => {
+      if (state.isConnected) {
+        syncQueuedWorkOrders();
+        syncQueuedComplaints();
+
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+
+  useEffect(() => {
+
     const checkNfcStatus = async () => {
       try {
         const isSupported = await NfcManager.isSupported();

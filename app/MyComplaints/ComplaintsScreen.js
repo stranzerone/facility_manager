@@ -15,6 +15,7 @@ import FilterOptions from '../WorkOrders/WorkOrderFilter';
 import { usePermissions } from '../GlobalVariables/PermissionsContext';
 import Loader from '../LoadingScreen/AnimatedLoader';
 import { GetAllMyComplaints } from '../../service/ComplaintApis/GetMyAllComplaints';
+import { readFromFile } from '../../offline/fileSystem/fileOperations';
 
 const ComplaintsScreen = () => {
   const [complaints, setComplaints] = useState([]);
@@ -30,7 +31,12 @@ const ComplaintsScreen = () => {
   const fetchComplaints = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await GetMyComplaints();
+      
+      // const response = await GetMyComplaints();
+        const data = await readFromFile('myComplaints.json');
+        const response = JSON.parse(data);
+
+        console.log(response.data,'this is for complaints off')
       setComplaints(response.data || []);
     } catch (err) {
       setComplaints([]);

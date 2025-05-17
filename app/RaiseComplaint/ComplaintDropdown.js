@@ -7,6 +7,7 @@ import { GetAllMyComplaints } from '../../service/ComplaintApis/GetMyAllComplain
 import { FontAwesome } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { usePermissions } from '../GlobalVariables/PermissionsContext';
+import { readFromFile } from '../../offline/fileSystem/fileOperations';
 
 const { width } = Dimensions.get('window');
 
@@ -20,7 +21,9 @@ const ComplaintDropdown = () => {
   useEffect(() => {
     const fetchComplaints = async () => {
       try {
-        const response = await GetAllMyComplaints();
+        // const response = await GetAllMyComplaints();
+        const data = await readFromFile('complaintCategories.json');
+        response = JSON.parse(data);
         if (response?.data) {
           setComplaints(Object.values(response.data));
         }

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,7 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 import FilterOptions from './WorkOrderFilter';
 import WorkOrderCard from './WorkOrderCards';
 import { fetchServiceRequests } from '../../service/FetchWorkOrderApi';
-import {useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import Loader from '../LoadingScreen/AnimatedLoader';
 import { fetchAllUsers } from '../../utils/Slices/UsersSlice';
 import { fetchAllTeams } from '../../utils/Slices/TeamSlice';
@@ -19,6 +19,7 @@ import { useDispatch, useSelector } from 'react-redux'; // Import useSelector to
 import { usePermissions } from '../GlobalVariables/PermissionsContext';
 import { GetSingleWorkOrders } from '../../service/WorkOrderApis/GetSingleWorkOrderApi';
 import { getLocationWorkOrder } from '../../service/WorkOrderApis/GetLocationWo';
+import { getLocationHk } from '../../service/HouseKeepingApis/GetHkOnScan';
 
 const WorkOrderPage = ({route}) => {
 

@@ -3,6 +3,9 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, Platform } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { useSelector } from 'react-redux';
+import useConvertToIST from '../TimeConvertot/ConvertUtcToIst';
+import { getAllTeams } from '../../service/GetUsersApi/GetAllTeams';
+import { GetWorkOrderInfo } from '../../service/WorkOrderApis/GetWorkOrderInfo';
 import moment from 'moment';
 import { usePermissions } from '../GlobalVariables/PermissionsContext';
 
@@ -39,6 +42,7 @@ const getPriorityColor = (priority) => {
 };
 
 const WorkOrderCard = React.memo(({ workOrder,previousScreen,type,uuid }) => {
+
   const navigation = useNavigation();
   const statusColor = getStatusColor(workOrder.wo.Status);
   const priorityColor = getPriorityColor(workOrder.wo.Priority);
@@ -176,9 +180,8 @@ function formatDateTime(dateTimeString) {
   const largeFontSize = Platform.OS === 'ios' ? 16 : 18;
   return (
     <TouchableOpacity
-    className={`bg-white border p-4 rounded-md shadow-lg my-1 relative ${(workOrderReadPermission || uuid )?"bg-white":"bg-gray-200"}`}
-    style={{ borderColor: 'darkblue',
-     }}
+    className="bg-white border p-4 rounded-md shadow-lg my-1 relative"
+    style={{ borderColor: 'darkblue' }}
     onPress={workOrderClick}
  
   >

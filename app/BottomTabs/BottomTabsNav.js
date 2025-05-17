@@ -39,6 +39,7 @@ import WorkOrderPage from '../WorkOrders/WorkOrderScreen';
 import UpcomingWorkOrdersScreen from '../WorkOrders/FutureWoScreen';
 import { appUnRegistered } from '../../service/OneSignalNotifications/UnRegisterOneSingal';
 import useNfcTagHandler from '../../utils/GlobalFunctions/NfcTagHandler';
+import { apiCallOnLogin } from '../../offline/fileSystem/apiCallOnLogin';
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
 
@@ -194,7 +195,7 @@ const MyTabs = () => {
     const loadPermissions = async () => {
 
       try {
-        
+        apiCallOnLogin()
         const savedPermissions = await AsyncStorage.getItem('userInfo');
         // const societyString = await AsyncStorage.getItem('society');
         
@@ -425,7 +426,7 @@ const StoreSociety = async() =>{
             borderTopLeftRadius: 20,
             borderTopRightRadius: 20,
             paddingTop: Platform.OS === 'android' ? null : 10,
-            height: Platform.OS === 'android' ? 60 : 70,
+            // height: Platform.OS === 'android' ? 60 : 70,
             ...styles.shadow,
             elevation: 5,
           },
