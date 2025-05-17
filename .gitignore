@@ -1,0 +1,81 @@
+# React Native
+# -----------------
+
+# Node modules
+node_modules/
+android/
+expo/
+# npm logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Android build files
+android/app/build/
+android/.gradle/
+android/.idea/
+android/build/
+android/local.properties
+
+# iOS build files
+ios/Pods/
+ios/build/
+ios/DerivedData/
+ios/*.xcworkspace
+ios/*.xcuserdata
+ios/*.xcodeproj/project.xcworkspace/
+ios/*.xcodeproj/xcuserdata/
+
+# Buck build files
+buck-out/
+\.buckconfig.local
+
+# Misc
+.expo/
+.expo-shared/
+.expo-workspace/
+
+# Temporary files
+*.tmp
+*.swp
+*.lock
+
+# Logs
+*.log
+
+# Metro bundler cache
+metro-cache/
+
+# Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output
+
+# JetBrains IDEs
+.idea/
+
+# VSCode
+.vscode/
+
+# Mac system files
+.DS_Store
+
+# Android Studio
+.gradle/
+local.properties
+*.iml
+
+# Testing and coverage
+coverage/
+jest-cache/
+
+# Environment files
+.env
+.env.*.local
+
+# Expo
+.expo/
+
+# CocoaPods
+Pods/
