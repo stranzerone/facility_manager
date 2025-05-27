@@ -1,18 +1,14 @@
-import React, { useState, useCallback } from "react";
+import  { useState, useCallback } from "react";
 import {
-  View,
-  Text,
   StyleSheet,
   SafeAreaView,
-  Platform,
-  PermissionsAndroid,
 } from "react-native";
-import { CameraScreen,Camera } from "react-native-camera-kit";
+import {Camera } from "react-native-camera-kit";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import DynamicPopup from "../DynamivPopUps/DynapicPopUpScreen";
 import { usePermissions } from "../GlobalVariables/PermissionsContext";
-import { GetWarehouseInfo } from "../../service/Inventory/GetwarehouseInfo";
+import { InventoryServices } from "../../services/apis/InventoryApi";
 
 export default function QrScanner({ screenType = "OW" }) {
   const [scanned, setScanned] = useState(false);
@@ -37,8 +33,9 @@ export default function QrScanner({ screenType = "OW" }) {
 
   const fetchInvInfo = async (uuid) => {
     try {
-      const response = await GetWarehouseInfo();
+      const response = await InventoryServices.getWareHouseStatus();
       const warehouse = response?.data?.find((item) => item.uuid === uuid);
+      console.log(warehouse)
       return warehouse?.Active || false;
     } catch (error) {
       console.error("Error retrieving warehouse info:", error.message || error);

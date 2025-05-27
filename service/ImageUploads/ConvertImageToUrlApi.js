@@ -43,6 +43,7 @@ export const uploadImageToServer = async (data, itemId, WoUuId,onlyUpload) => {
     formData.append('api-token', apiToken);
 
     // Make the POST request to upload the image
+    console.log(formData, "this is form data for pdf upload server")
     const response = await axios.post(`${API_URL3}/v1/society/${societyId}/publicupload`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data', // Correct header for file upload

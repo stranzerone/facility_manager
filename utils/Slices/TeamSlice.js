@@ -1,14 +1,14 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { getAllTeams } from '../../service/GetUsersApi/GetAllTeams';
-import { GetSiteUuid } from '../../service/GetSiteInfo';
+import { workOrderService } from '../../services/apis/workorderApis';
 
 // Async thunk to fetch all Teams
 export const fetchAllTeams = createAsyncThunk(
   'teams/fetchAllTeams',
   async (_, { rejectWithValue }) => {
     try {
-      const siteUuId = await GetSiteUuid()
-      const response = await getAllTeams(siteUuId);
+      const siteUuId = await workOrderService.getSiteInfo()
+      const response = await workOrderService.getAllTeams(siteUuId);
+      console.log(response,'this is for teams')
       const teamsArray = Array.isArray(response.data)
         ? response.data
         : Object.values(response.data || {});

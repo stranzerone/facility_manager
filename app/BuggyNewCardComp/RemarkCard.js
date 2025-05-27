@@ -1,8 +1,8 @@
-import React, { useState } from "react";
+import  { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, Keyboard } from "react-native";
-import styles from "../BuggyListCardComponets/InputFieldStyleSheet";
-import { UpdateInstructionApi } from "../../service/BuggyListApis/UpdateInstructionApi";
+import styles from "./styles";
 import Icon from "react-native-vector-icons/FontAwesome";
+import { workOrderService } from "../../services/apis/workorderApis";
 const RemarkCard = ({ item,editable }) => {
   // Initialize the remark state based on item.remark, if exists
   const [isEditing, setIsEditing] = useState(false);
@@ -23,15 +23,15 @@ const RemarkCard = ({ item,editable }) => {
     setIsEditing(false); // Close the input field
 
     const payload = {
+      
       id: item.id,
-      remark: remark.trim(), // Send trimmed value
+      remarks: remark.trim(), // Send trimmed value
       WoUuId: item.ref_uuid,
-      image: false,
     };
 
     try {
       // Call the API to update the remark value
-      const response = await UpdateInstructionApi(payload);
+       await workOrderService.updateInstruction(payload);
     } catch (error) {
       console.error("Error updating remark:", error);
     }

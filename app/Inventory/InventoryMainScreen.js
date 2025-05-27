@@ -9,8 +9,7 @@ import {
   Platform,
 } from "react-native";
 import FontAwesome from "react-native-vector-icons/FontAwesome";
-import { GetWarehouseInfo } from "../../service/Inventory/GetwarehouseInfo";
-import DynamicPopup from "../DynamivPopUps/DynapicPopUpScreen";
+import { InventoryServices } from "../../services/apis/InventoryApi";
 
 const options = [
   { id: "IR", label: "Issue Request", icon: "exchange", enabled: true, color: "#1996D3" },
@@ -33,7 +32,7 @@ useEffect(()=>{
   const fetchData = async () => {
   try{
 
-const response = await GetWarehouseInfo()
+const response = await InventoryServices.getWareHouseStatus()
 
  setInvInfo(response?.data?.find((item)=>item.uuid === uuid) || {})
   }catch{

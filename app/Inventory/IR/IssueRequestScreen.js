@@ -4,22 +4,20 @@ import {
   Text,
   FlatList,
   SafeAreaView,
-  ActivityIndicator,
   RefreshControl,
   TouchableOpacity,
 } from "react-native";
 import FontAwesome from "react-native-vector-icons/FontAwesome";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import IRCard from "./IRcard"; // adjust path if needed
-import { GetAllIssueItems } from "../../../service/Inventory/GetAllissues";
 import OptionsModal from "../../DynamivPopUps/DynamicOptionsPopUp"; // adjust path if needed
 import { usePermissions } from "../../GlobalVariables/PermissionsContext";
 import Loader from "../../LoadingScreen/AnimatedLoader";
+import { InventoryServices } from "../../../services/apis/InventoryApi";
 
 const IRItemsScreen = ({ route }) => {
   const navigation = useNavigation();
   const uuid = route?.params?.uuid || null;
-
   const [irItems, setIrItems] = useState([]);
   const [filteredItems, setFilteredItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -42,7 +40,7 @@ const IRItemsScreen = ({ route }) => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const response = await GetAllIssueItems(uuid);
+      const response = await InventoryServices.getAllIssueRequests(uuid);
       const allItems = response.data || [];
       setIrItems(allItems);
       const filtered = filterByStatus(allItems, selectedStatus);

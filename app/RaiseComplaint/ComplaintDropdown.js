@@ -1,13 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, TextInput, 
   Dimensions, FlatList, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard 
 } from 'react-native';
-import { GetAllMyComplaints } from '../../service/ComplaintApis/GetMyAllComplaints';
 import { FontAwesome } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { usePermissions } from '../GlobalVariables/PermissionsContext';
-import { readFromFile } from '../../offline/fileSystem/fileOperations';
+import { complaintService } from '../../services/apis/complaintApis';
 
 const { width } = Dimensions.get('window');
 
@@ -15,15 +14,13 @@ const ComplaintDropdown = () => {
   const [complaints, setComplaints] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const { notificationsCount } = usePermissions();
+  const { notificationsCount, nightMode } = usePermissions();
   const navigation = useNavigation();
 
   useEffect(() => {
     const fetchComplaints = async () => {
       try {
-        // const response = await GetAllMyComplaints();
-        const data = await readFromFile('complaintCategories.json');
-        response = JSON.parse(data);
+        const response = await complaintService.getComplaintCategories();
         if (response?.data) {
           setComplaints(Object.values(response.data));
         }
@@ -48,34 +45,34 @@ const ComplaintDropdown = () => {
     return (
       <TouchableOpacity 
         key={item.id} 
-        style={styles.cardContainer} 
+        style={[styles.cardContainer, nightMode && styles.cardContainerDark]} 
         onPress={() => navigation.navigate('subComplaint', { subCategory: item.sub_catagory, category: item })}
       >
-        <View style={styles.circleContainer}>
+        <View style={[styles.circleContainer, nightMode && styles.circleContainerDark]}>
           <Text style={styles.circleText}>{firstLetter}</Text>
         </View>
-        <Text style={styles.cardText}>{firstLine.trim()}</Text>
-        {secondLine && <Text style={styles.cardText}>{'(' + secondLine}</Text>}
+        <Text style={[styles.cardText, nightMode && styles.cardTextDark]}>{firstLine.trim()}</Text>
+        {secondLine && <Text style={[styles.cardText, nightMode && styles.cardTextDark]}>{'(' + secondLine}</Text>}
       </TouchableOpacity>
     );
   };
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <View style={styles.flexContainer}>
+      <View style={[styles.flexContainer, nightMode && styles.flexContainerDark]}>
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           style={styles.flexContainer}
         >
           {/* Search Bar */}
-          <View style={styles.searchContainer}>
-            <View style={styles.searchIconContainer}>
+          <View style={[styles.searchContainer, nightMode && styles.searchContainerDark]}>
+            <View style={[styles.searchIconContainer, nightMode && styles.searchIconContainerDark]}>
               <FontAwesome name="search" size={20} color="white" />
             </View>
             <TextInput
-              style={styles.searchBar}
+              style={[styles.searchBar, nightMode && styles.searchBarDark]}
               placeholder="Search Category..."
-              placeholderTextColor="#B0B0B0"
+              placeholderTextColor={nightMode ? "#888" : "#B0B0B0"}
               value={searchQuery}
               onChangeText={setSearchQuery}
             />
@@ -90,7 +87,7 @@ const ComplaintDropdown = () => {
               data={filteredComplaints}
               renderItem={renderComplaintCard}
               keyExtractor={(item) => item.id.toString()}
-              ListEmptyComponent={<Text style={styles.noResultsText}>No complaints found.</Text>}
+              ListEmptyComponent={<Text style={[styles.noResultsText, nightMode && styles.noResultsTextDark]}>No complaints found.</Text>}
               showsVerticalScrollIndicator={false}
               numColumns={2}
               keyboardShouldPersistTaps="handled"
@@ -107,6 +104,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F9F9F9',
   },
+  flexContainerDark: {
+    backgroundColor: '#121212',
+  },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -115,11 +115,20 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     elevation: 3,
   },
+  searchContainerDark: {
+    backgroundColor: '#1E1E1E',
+    elevation: 0,
+    borderWidth: 1,
+    borderColor: '#333',
+  },
   searchIconContainer: {
     backgroundColor: '#1996D3',
     padding: 15,
     borderTopLeftRadius: 8,
     borderBottomLeftRadius: 8,
+  },
+  searchIconContainerDark: {
+    backgroundColor: '#1565A1',
   },
   searchBar: {
     flex: 1,
@@ -129,6 +138,11 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderTopRightRadius: 8,
     borderBottomRightRadius: 8,
+    color: '#000',
+  },
+  searchBarDark: {
+    backgroundColor: '#1E1E1E',
+    color: '#E5E5EA',
   },
   listContainer: {
     paddingBottom: 150,
@@ -146,9 +160,14 @@ const styles = StyleSheet.create({
     marginTop: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.15,
     shadowRadius: 4,
     elevation: 5,
+  },
+  cardContainerDark: {
+    backgroundColor: '#2C2C2E',
+    shadowColor: '#000',
+    shadowOpacity: 0.6,
   },
   cardText: {
     color: '#074B7C',
@@ -158,6 +177,9 @@ const styles = StyleSheet.create({
     fontSize: Math.max(14, width * 0.04),
     flexWrap: 'wrap',
   },
+  cardTextDark: {
+    color: '#E5E5EA',
+  },
   circleContainer: {
     width: 40,
     height: 40,
@@ -166,6 +188,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 5,
+  },
+  circleContainerDark: {
+    backgroundColor: '#1565A1',
   },
   circleText: {
     color: '#FFFFFF',
@@ -177,6 +202,9 @@ const styles = StyleSheet.create({
     color: '#B0B0B0',
     textAlign: 'center',
     marginTop: 20,
+  },
+  noResultsTextDark: {
+    color: '#888',
   },
   loader: {
     marginTop: 20,

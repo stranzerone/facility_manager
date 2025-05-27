@@ -1,12 +1,12 @@
 // ./app/redux/buggyListSlice.js
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { GetInstructionsApi } from '../../service/BuggyListApis/GetInstructionsApi';
+import { workOrderService } from '../../services/apis/workorderApis';
 
 // Thunk to fetch data for a single UUID
 export const fetchDataByUuid = createAsyncThunk(
   'buggyList/fetchDataByUuid',
   async (uuid) => {
-    const response = await GetInstructionsApi(uuid); // Await the API call
+    const response = await workOrderService.getInstructionsForWo(uuid); // Await the API call
     return { uuid, data: response.data }; // Returning UUID and full response data
   }
 );

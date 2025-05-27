@@ -10,8 +10,7 @@ import {
 } from 'react-native';
 import { FontAwesome, MaterialIcons } from '@expo/vector-icons';
 import { useSelector } from 'react-redux';
-import { WorkOrderInfoApi } from '../../service/WorkOrderInfoApi';
-import useConvertToSystemTime from '../TimeConvertot/ConvertUtcToIst';
+import { workOrderService } from '../../services/apis/workorderApis';
 
 const AssetInfo = ({ WoUuId }) => {
   const [workOrder, setWorkOrder] = useState(null);
@@ -28,8 +27,9 @@ const AssetInfo = ({ WoUuId }) => {
   useEffect(() => {
     const loadWorkOrderData = async () => {
       try {
-        const data = await WorkOrderInfoApi(WoUuId);
-        setWorkOrder(data);
+        const response = await workOrderService.getWoInfo(WoUuId)
+   
+        setWorkOrder(response.data);
 
         // if (data && data[0]?.pm?.AssignedTeam?.length && teams) {
         //   const teamId = data[0].pm.AssignedTeam[0];
@@ -68,11 +68,11 @@ const AssetInfo = ({ WoUuId }) => {
   
   // Map user IDs to user names for assigned users
   useEffect(() => {
-    if (users[0] !== 'error' && workOrder && workOrder[0]?.wo?.Assigned && users[1]) {
+    if (users) {
       const assignedUserIds = workOrder[0].wo.Assigned;
       const assignedNames = assignedUserIds
         ?.map((id) => {
-          const user = users[1]?.find((user) => user.user_id === id);
+          const user = users?.find((user) => user.user_id === id);
           return user ? user.name : 'Unknown User';
         })
         .join(', ') || 'None';

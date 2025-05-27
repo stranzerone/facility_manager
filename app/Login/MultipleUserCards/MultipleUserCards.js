@@ -10,7 +10,7 @@ import {
 import Icon from 'react-native-vector-icons/FontAwesome';
 
 const UserCard = ({ visible, onClose, users, onSelectUser }) => {
-  const renderUser = ({ item=[] }) => (
+  const renderUser = ({ item }) => (
     <TouchableOpacity style={styles.userCard} onPress={() => onSelectUser(item)}>
       <View style={styles.userInfo}>
         <Icon name="user-circle" size={30} color="#074B7C" style={styles.profileIcon} />

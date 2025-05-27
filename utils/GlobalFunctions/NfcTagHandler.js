@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import NfcManager, { NfcEvents } from 'react-native-nfc-manager';
-import GetUuId from '../../service/NfcTag/GetUuId';
 import { useNavigation } from '@react-navigation/native';
+import { complaintService } from '../../services/apis/complaintApis';
 
 const useNfcTagHandler = ({ setPopupVisible, setPopupMessage, setPopupType }) => {
   const navigation = useNavigation();
@@ -12,7 +12,7 @@ const useNfcTagHandler = ({ setPopupVisible, setPopupMessage, setPopupType }) =>
         if (!tag?.id) return;
 
         const tagId = tag.id.toLowerCase();
-        const response = await GetUuId(tagId);
+        const response = await complaintService.getNfcUuid(tagId);
 
         if (response.status === 'success') {
           if (response.data && response.data.length > 0) {

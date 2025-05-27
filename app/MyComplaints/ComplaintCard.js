@@ -1,9 +1,10 @@
 import { useNavigation } from '@react-navigation/native';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import useConvertToSystemTime from '../TimeConvertot/ConvertUtcToIst';
 import { useSelector } from 'react-redux';
+import { usePermissions } from '../GlobalVariables/PermissionsContext';
 
 const getStatusStyles = (status) => {
   switch (status) {
@@ -20,101 +21,100 @@ const getStatusStyles = (status) => {
   }
 };
 
-
-
-const ComplaintCard = ({ data,categroy }) => {
+const ComplaintCard = ({ data, categroy }) => {
   const navigation = useNavigation();
+  const { nightMode } = usePermissions();
   const { color, icon } = getStatusStyles(data.status);
-// const [myCat,setMyCat] = useState('')
-  const handlePress = () => {
-    navigation.navigate('CloseComplaint', { complaint: data, category: myCat,creator :createdByName});
-  };
-
-
-  
   const users = useSelector((state) => state.users.data);
 
-const getUserNames = (assignedId) => {
-  if (!assignedId) {
-    return false;
-  }
+  const createdByName = useMemo(() => {
+    const user = users?.find((u) => u.user_id === data.created_by);
+    return user?.name || '';
+  }, [users, data.created_by]);
 
-  if (users[0] === 'success') {
-    const user = users[1]?.find((user) => user.user_id === assignedId);
-    return user ? user.name : null;
-  }
+  const myCat = useMemo(() => {
+    return categroy.find((cat) => cat.id === data.complaint_type)?.name || '';
+  }, [categroy, data.complaint_type]);
 
-  return false;
-};
+  const handlePress = () => {
+    navigation.navigate('CloseComplaint', {
+      complaint: data,
+      category: myCat,
+      creator: createdByName,
+    });
+  };
 
-
-const myCat = useMemo(() => {
-  return categroy.find((cat) => cat.id === data.complaint_type)?.name || "";
-}, [categroy, data.complaint_type]);
-
-
-const createdByName = getUserNames(data.created_by);
-
-
-
+  const colors = {
+    bg: nightMode ? '#1e1e1e' : '#fff',
+    text: nightMode ? '#e0e0e0' : '#333',
+    muted: nightMode ? '#999' : '#666',
+    border: nightMode ? '#333' : '#ccc',
+    tagBg: nightMode ? '#333' : '#e0f2fe',
+    tagText: nightMode ? '#90cdf4' : '#1e40af',
+  };
 
   return (
-    <TouchableOpacity onPress={handlePress} style={[styles.card, { borderColor: color }]}>
-      {/* Header Section */}
-      <View style={styles.headerContainer}>
-        <Icon name="file-text" size={20} color="#333" />
-        <Text style={styles.complaintNo}>{data.com_no}</Text>
+    <TouchableOpacity onPress={handlePress} style={[styles.card, { borderColor: color, backgroundColor: colors.bg }]}>
+      <View style={styles.header}>
+        <View style={styles.row}>
+          <Icon name="file-text" size={14} color={colors.text} />
+          <Text style={[styles.complaintNo, { color: colors.text }]}>{data.com_no}</Text>
+        </View>
         <View style={[styles.statusContainer, { backgroundColor: color }]}>
-          <Icon name={icon} size={14} color="#fff" />
+          <Icon name={icon} size={12} color="#fff" />
           <Text style={styles.status}>{data.status}</Text>
         </View>
       </View>
 
+      {/* Category */}
+      {myCat && (
+        <View style={styles.row}>
+          <Icon name="list-alt" size={12} color={colors.tagText} />
+          <Text style={[styles.label, { color: colors.text }]}>Category:</Text>
+          <Text style={[styles.tag, { backgroundColor: colors.tagBg, color: colors.tagText }]}>
+            {myCat}
+          </Text>
+        </View>
+      )}
 
+      {/* Description */}
+      <Text numberOfLines={2} style={[styles.description, { color: colors.muted }]}>
+        {data.description}
+      </Text>
 
-<View>
-{myCat && <View className="flex flex-row gap-1 items-center my-2" >
-<Icon name="list-alt" size={16} color="#60A5FA" />
-
-<Text className="font-bold">Category : </Text>
-<Text 
-  className="bg-blue-400 rounded-lg text-white font-bold max-w-[70%] px-1 py-1"
-  numberOfLines={1}
-  ellipsizeMode="tail"
->
-  {myCat}
-</Text>
-</View>}
-</View>
-      {/* Description (Truncated) */}
-      <Text style={styles.description} numberOfLines={2}>{data.description}</Text>
-
-
-      <View style={styles.footerContainer}>
-
-     { createdByName &&  <View style={styles.infoItem}>
-          <Icon name="user" size={16} color="#074B7C" />
-          <Text className="font-bold" style={styles.infoText}>Created By: {createdByName}</Text>
-        </View>}
-     
-        <View style={styles.infoItem}>
-          <Icon name="calendar" size={16} color="#34A853" />
-          <Text style={styles.infoText}>{useConvertToSystemTime(data.created_at)}</Text>
+      {/* Footer Info */}
+      <View style={styles.footer}>
+        {createdByName && (
+          <View style={styles.infoRow}>
+            <Icon name="user" size={12} color={colors.muted} />
+            <Text style={[styles.infoText, { color: colors.text }]}>
+              {createdByName}
+            </Text>
+          </View>
+        )}
+        <View style={styles.infoRow}>
+          <Icon name="calendar" size={12} color={colors.muted} />
+          <Text style={[styles.infoText, { color: colors.text }]}>
+            {useConvertToSystemTime(data.created_at)}
+          </Text>
         </View>
 
-        {/* Display Unit & Reference Unit in One Row */}
-    { data?.display_unit_no &&    <View style={styles.rowContainer}>
-          <View style={styles.infoItem}>
-            <Icon name="map-marker" size={16} color="#D32F2F" />
-            <Text className='font-bold' style={styles.infoText}>D.Unit: {data.display_unit_no || 'N/A'}</Text>
+        {data?.display_unit_no && (
+          <View style={styles.rowBetween}>
+            <View style={styles.infoRow}>
+              <Icon name="map-marker" size={12} color="#D32F2F" />
+              <Text style={[styles.infoText, { color: colors.text }]}>
+                D.Unit: {data.display_unit_no}
+              </Text>
+            </View>
+            <View style={styles.infoRow}>
+              <Icon name="link" size={12} color="#F57C00" />
+              <Text style={[styles.infoText, { color: colors.text }]}>
+                Ref: {data.reference_unit_no ? data.reference_unit_no.slice(0, 12) + '...' : 'N/A'}
+              </Text>
+            </View>
           </View>
-          <View style={styles.infoItem}>
-            <Icon name="link" size={16} color="#F57C00" />
-            <Text className='font-bold' style={styles.infoText}>
-  Ref. Unit: {data.reference_unit_no ? data.resource.reference_unit_no.slice(0, 10)+"..." : 'N/A'}
-</Text>
-          </View>
-        </View>}
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -122,68 +122,73 @@ const createdByName = getUserNames(data.created_by);
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 15,
-    padding: 18,
-    marginVertical: 5,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 6 },
-    shadowRadius: 10,
-    elevation: 6,
-    borderWidth: 2,
+    borderRadius: 12,
+    padding: 12,
+    marginVertical: 6,
+    borderWidth: 1.5,
+    elevation: 3,
   },
-  headerContainer: {
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 6,
+  },
+  rowBetween: {
+    flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginTop: 4,
   },
   complaintNo: {
-    fontSize: 18,
+    fontSize: 14,
     fontWeight: 'bold',
-    color: '#333',
-    flex: 1,
-    marginLeft: 8,
+    marginLeft: 6,
   },
   statusContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: 20,
-    paddingVertical: 4,
-    paddingHorizontal: 12,
+    paddingVertical: 2,
+    paddingHorizontal: 10,
   },
   status: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: 'bold',
     color: '#fff',
-    marginLeft: 5,
+    marginLeft: 4,
+  },
+  label: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  tag: {
+    fontSize: 12,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    fontWeight: 'bold',
+    maxWidth: '60%',
   },
   description: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 12,
-    lineHeight: 20,
+    fontSize: 13,
+    marginTop: 4,
+    marginBottom: 6,
   },
-  footerContainer: {
-    flexDirection: 'column',
-    justifyContent: 'flex-start',
+  footer: {
+    marginTop: 4,
   },
-  infoItem: {
+  infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 6,
-    marginRight: 12,
+    gap: 6,
+    marginVertical: 2,
   },
   infoText: {
-    fontSize: 14,
-    color: '#333',
-    marginLeft: 6,
-  },
-  rowContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between', // Ensures items are in the same row
-    marginTop: 8,
+    fontSize: 12,
   },
 });
 

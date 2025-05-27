@@ -2,8 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { View, FlatList, StyleSheet, Text, ActivityIndicator, RefreshControl } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NotificationCard from './NotificationCard';
-import { GetNotificationsApi } from '../../service/NotificationsApis/GetNotificationsApi';
 import Loader from '../LoadingScreen/AnimatedLoader';
+import { complaintService } from '../../services/apis/complaintApis';
 
 const NotificationMainPage = () => {
   const [notifications, setNotifications] = useState([]);
@@ -18,7 +18,7 @@ const NotificationMainPage = () => {
     try {
       const userInfo = await AsyncStorage.getItem('userInfo');
       if (userInfo) {
-        const response = await GetNotificationsApi();
+        const response = await complaintService.getMyNotifications();
         setNotifications(response?.data || []);
       }
     } catch (err) {
@@ -67,7 +67,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F7F7F7',
-    paddingBottom: 35,
+    // paddingBottom: 35,
   },
   listContainer: {
     paddingBottom: 20,

@@ -18,6 +18,7 @@ export const loginApi = async (user) => {
   try {
     const { data } = await axios.post(API_URL2+'/login', payload);
 
+    console.log(data,'this is data for login')
     if (data.message === 'Login Successful.') {
       const { role } = data.data;
 

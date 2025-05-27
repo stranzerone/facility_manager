@@ -14,9 +14,9 @@ import {
   Keyboard,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
-import { WorkOrderAddComments } from '../../service/CommentServices/WorkOrderCommentsAddApi';
-import { WorkOrderComments } from "../../service/CommentServices/WorkOrderFetchCommentsApi";
 import CommentCard from './WoCommentsCards';
+import { workOrderService } from '../../services/apis/workorderApis';
+import { usePermissions } from '../GlobalVariables/PermissionsContext';
 
 const CommentsPage = ({ WoUuId, handleBuggyChange }) => {
   const [comments, setComments] = useState([]);
@@ -26,20 +26,16 @@ const CommentsPage = ({ WoUuId, handleBuggyChange }) => {
   const [selectedButton, setSelectedButton] = useState('C');
   const [isKeyboardVisible, setKeyboardVisible] = useState(false);
   const { height } = Dimensions.get('window');
+  const { nightMode } = usePermissions();
+  const styles = getStyles(nightMode);
 
   useEffect(() => {
     loadComments();
   }, [selectedButton]);
 
   useEffect(() => {
-    const keyboardDidShowListener = Keyboard.addListener(
-      'keyboardDidShow',
-      () => setKeyboardVisible(true)
-    );
-    const keyboardDidHideListener = Keyboard.addListener(
-      'keyboardDidHide',
-      () => setKeyboardVisible(false)
-    );
+    const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
+    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => setKeyboardVisible(false));
     return () => {
       keyboardDidShowListener.remove();
       keyboardDidHideListener.remove();
@@ -49,8 +45,8 @@ const CommentsPage = ({ WoUuId, handleBuggyChange }) => {
   const loadComments = async () => {
     setLoading(true);
     try {
-      const response = await WorkOrderComments(WoUuId, selectedButton);
-      setComments(response);
+      const response = await workOrderService.getWorkOrderComments(WoUuId, selectedButton);
+      setComments(response.data);
     } catch (error) {
       console.error('Error fetching comments:', error);
       setError(error.message);
@@ -62,7 +58,14 @@ const CommentsPage = ({ WoUuId, handleBuggyChange }) => {
   const handleCommentSubmit = async () => {
     if (!newComment.trim()) return;
     try {
-      const response = await WorkOrderAddComments({ newComment }, WoUuId);
+      const payload = {
+        comment: newComment,
+        data: {},
+        ref_uuid: WoUuId,
+        tag: 'C',
+        type: 'WO',
+      };
+      const response = await workOrderService.addComments(payload);
       if (response) {
         await loadComments();
         setNewComment('');
@@ -94,7 +97,11 @@ const CommentsPage = ({ WoUuId, handleBuggyChange }) => {
             renderItem={({ item }) => <CommentCard comment={item} />}
             scrollEnabled={false}
             contentContainerStyle={styles.commentsList}
-            ListEmptyComponent={<Text style={styles.emptyText}>No {selectedButton === "H" ? "History" : "Comments"} available</Text>}
+            ListEmptyComponent={
+              <Text style={styles.emptyText}>
+                No {selectedButton === 'H' ? 'History' : selectedButton === 'all' ? 'Records' : 'Comments'} available
+              </Text>
+            }
           />
         </ScrollView>
       )}
@@ -104,6 +111,7 @@ const CommentsPage = ({ WoUuId, handleBuggyChange }) => {
           <TextInput
             style={styles.input}
             placeholder="Enter remarks up to 250 char"
+            placeholderTextColor={nightMode ? "#aaa" : "#999"}
             value={newComment}
             onChangeText={setNewComment}
             multiline
@@ -143,30 +151,90 @@ const CommentsPage = ({ WoUuId, handleBuggyChange }) => {
   );
 };
 
-
-
-const styles = StyleSheet.create({
-  container: { flex: 1, padding: 10, backgroundColor: '#f9f9f9' },
-  loaderContainer: { justifyContent: 'center', alignItems: 'center', flex: 1 },
-  commentsList: { paddingBottom: 16 },
-  emptyText: { fontSize: 18, fontWeight: 'bold', color: '#999', textAlign: 'center' },
-  headerContainer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 15, backgroundColor: '#074B7C' },
-  headerText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
-  commentInputContainer: { flexDirection: 'row', alignItems: 'center', padding: 5, borderTopWidth: 1, borderTopColor: '#ccc', backgroundColor: '#f2fcff' },
-  input: { flex: 1, borderColor: '#ccc', borderWidth: 1, borderRadius: 8, padding: 2, backgroundColor: 'white', textAlignVertical: 'center',maxHeight:50 },
-  button: { backgroundColor: '#074B7C', borderRadius: 8, paddingVertical: 10, paddingHorizontal: 15, justifyContent: 'center', alignItems: 'center' },
-  buttonText: { color: '#fff', fontWeight: 'bold' },
-  bottomButtonsContainer: { flexDirection: 'row', justifyContent: 'space-between', padding: 10, backgroundColor: '#a6d1e0', paddingBottom:Platform.OS==="android" ?60 :80 },
-  bottomButton: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 6 },
-  selectedButton: { borderRadius: 10, backgroundColor: '#074B7C' },
-  bottomButtonText: { fontWeight: 'bold', marginTop: 5, fontSize: 12 },
-  closeButton: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    zIndex: 1,
-    padding: 10,
-  },
-});
+const getStyles = (nightMode) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      // padding: 10,
+      backgroundColor: nightMode ? '#121212' : '#f9f9f9',
+    },
+    loaderContainer: {
+      justifyContent: 'center',
+      alignItems: 'center',
+      flex: 1,
+    },
+    commentsList: {
+      // paddingBottom: 16,
+    },
+    emptyText: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      color: nightMode ? '#bbb' : '#999',
+      textAlign: 'center',
+    },
+    commentInputContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: 5,
+      borderTopWidth: 1,
+      borderTopColor: nightMode ? '#444' : '#ccc',
+      backgroundColor: nightMode ? '#1e1e1e' : '#f2fcff',
+    },
+    input: {
+      flex: 1,
+      borderColor: nightMode ? '#555' : '#ccc',
+      borderWidth: 1,
+      borderRadius: 8,
+      padding: 2,
+      backgroundColor: nightMode ? '#2a2a2a' : 'white',
+      color: nightMode ? '#fff' : '#000',
+      textAlignVertical: 'center',
+      maxHeight: 50,
+    },
+    button: {
+      backgroundColor: '#074B7C',
+      borderRadius: 8,
+      // paddingVertical: 10,
+      paddingHorizontal: 15,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    buttonText: {
+      color: '#fff',
+      padding:5,
+      paddingVertical:10,
+      fontWeight: 'bold',
+    },
+    bottomButtonsContainer: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      padding: 10,
+      backgroundColor: nightMode ? '#1e1e1e' : '#a6d1e0',
+      // paddingBottom: Platform.OS === 'android' ? 60 : 80,
+    },
+    bottomButton: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingVertical: 6,
+    },
+    selectedButton: {
+      borderRadius: 10,
+      backgroundColor: '#074B7C',
+    },
+    bottomButtonText: {
+      fontWeight: 'bold',
+      marginTop: 5,
+      fontSize: 12,
+      color: nightMode ? '#074B7C' : '#000',
+    },
+    closeButton: {
+      position: 'absolute',
+      top: 10,
+      right: 10,
+      zIndex: 1,
+      padding: 10,
+    },
+  });
 
 export default CommentsPage;

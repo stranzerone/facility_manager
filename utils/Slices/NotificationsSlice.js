@@ -1,6 +1,6 @@
 // notificationsSlice.js
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { GetNotificationsApi } from '../../service/NotificationsApis/GetNotificationsApi';
+import { complaintService } from '../../services/apis/complaintApis';
 
 // Async thunk for fetching notifications
 export const fetchNotifications = createAsyncThunk(
@@ -9,7 +9,7 @@ export const fetchNotifications = createAsyncThunk(
     try {
       const { notifications } = getState(); // Get the current state
       const page = notifications.page; // Use the current page
-      const notificationsResponse = await GetNotificationsApi(page);
+      const notificationsResponse = await complaintService.getMyNotifications(page);
       return notificationsResponse; // Adjust the structure if needed
     } catch (error) {
       return rejectWithValue(error.message);

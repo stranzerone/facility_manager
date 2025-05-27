@@ -11,6 +11,7 @@ export const PermissionsProvider = ({ children }) => {
   const [instructionPermissions, setInstructionPermissions] = useState([]);
   const [issueRequestPermission, setIssueRequestPermission] = useState([]);
   const [ppmWorkorder,setPpmWorkorder] = useState([])
+  const [nightMode,setNightMode]  = useState()
  const [complaintFilter,setComplaintFilter]  = useState("Open")
   const loadPermissions = async () => {
     try {
@@ -58,6 +59,7 @@ export const PermissionsProvider = ({ children }) => {
         complaintFilter,
         ppmWorkorder,
         issueRequestPermission,
+        nightMode,
         setComplaintFilter,
         setPpmAsstPermissions,
         setComplaintPermissions,
@@ -65,6 +67,7 @@ export const PermissionsProvider = ({ children }) => {
         loadPermissions,
         setPpmWorkorder,
         setIssueRequestPermission,
+        setNightMode
       }}
     >
       {children}

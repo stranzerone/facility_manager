@@ -1,79 +1,104 @@
 import React, { useState } from "react";
-import { View, Text, TouchableOpacity, Alert } from "react-native";
-import styles from "../BuggyListCardComponets/InputFieldStyleSheet";
+import { View, Text, TouchableOpacity, Alert, Image } from "react-native";
+import styles from "./styles";
 import OptionsModal from "../DynamivPopUps/DynamicOptionsPopUp";
-import RemarkCard from "./RemarkCard"; // Assuming RemarkCard is available
-import { UpdateInstructionApi } from "../../service/BuggyListApis/UpdateInstructionApi";
-import Icon from "react-native-vector-icons/FontAwesome"; // Import FontAwesome
+import RemarkCard from "./RemarkCard";
+import Icon from "react-native-vector-icons/FontAwesome";
+import { Ionicons } from "@expo/vector-icons";
 import useConvertToSystemTime from "../TimeConvertot/ConvertUtcToIst";
+import { workOrderService } from "../../services/apis/workorderApis";
+import { usePermissions } from "../GlobalVariables/PermissionsContext";
 
-
-const DropdownCard = ({ item, onUpdate,editable }) => {
+const DropdownCard = ({ item, onUpdate, editable }) => {
+  const { nightMode } = usePermissions();
   const [selectedValue, setSelectedValue] = useState(item.result || "");
   const [modalVisible, setModalVisible] = useState(false);
-  const updatedTime =useConvertToSystemTime(item?.updated_at)
+  const updatedTime = useConvertToSystemTime(item?.updated_at);
+
+  const backgroundColor = editable
+    ? selectedValue
+      ? nightMode ? "#2C2C2E" : "#DFF6DD"
+      : nightMode ? "#1C1C1E" : "#FFFFFF"
+    : selectedValue
+      ? nightMode ? "#2C2C2E" : "#DCFCE7"
+      : nightMode ? "#1C1C1E" : "#E5E7EB";
+
+  const textColor = nightMode ? "#E5E5EA" : "#1F2937";
+  const iconColor = nightMode ? "#A1A1AA" : "#1F2937";
 
   const handleChange = async (value) => {
-    setSelectedValue(value); // Update the selected value locally
+    setSelectedValue(value);
 
     try {
-      // Prepare the payload
       const payload = {
         id: item.id,
-        value: value,
+        result: value,
         WoUuId: item.ref_uuid,
         image: false,
       };
 
-      // Call the API to update the value
- await UpdateInstructionApi(payload);
-
-  onUpdate()
-
+      await workOrderService.updateInstruction(payload);
+      onUpdate();
     } catch (error) {
       console.error("Error updating option:", error);
       Alert.alert("Error", "Failed to update option.");
     }
 
-    setModalVisible(false); // Close the modal after selection
+    setModalVisible(false);
   };
 
   return (
-    <View
-      style={[
-        styles.inputContainer,
-    editable?selectedValue ? { backgroundColor: "#DFF6DD" } :{backgroundColor:"white"}:selectedValue?{ backgroundColor: "#DCFCE7" } : { backgroundColor: "#E5E7EB" }, // Light green if a value is selected
-      ]}
-    >
-      {/* Title */}
-      <View className="flex-row p-2">
-      <Text className="font-bold  text-xl mr-2">{item.order}.</Text>
-      
-      <Text style={styles.title}>{item.title}</Text>
-
-      </View>
-      {/* Touchable dropdown button */}
-      <View style={styles.dropdownContainer}>
-       <TouchableOpacity
-       className="flex flex-row items-center justify-between"
-        disabled={!editable}
-          style={styles.inputContainer}
-          onPress={() => setModalVisible(true)}
-        >
-          <Text style={styles.dropdownText}>
-            {selectedValue || "Select an option"}
-          </Text>
-          
-          <Icon
-            name="caret-down"
-            size={20}
-            color="#074B7C"
-            className="ml-2" // Adds space between text and icon
+    <View className="rounded-md mb-3 p-2 shadow-sm" style={[styles.inputContainer, { backgroundColor }]}>
+      {/* Header */}
+      <View className="flex-row justify-between items-center px-2 mb-1">
+        <View className="flex-row items-center gap-2">
+          <Image
+            source={{ uri: "https://randomuser.me/api/portraits/men/1.jpg" }}
+            style={{ width: 20, height: 20, borderRadius: 4 }}
           />
-        </TouchableOpacity>
+          <Ionicons name="document-text-outline" size={16} color={iconColor} />
+          {item?.data?.optional && (
+          <View className="flex-row items-center">
+              
+            <Icon name="info-circle" size={16} color="orange" />
+            <Text className="ml-1 text-red-700 font-bold">Optional</Text>
+            </View>    
+                )}
+        </View>
+        <View className="flex-row gap-2 items-center">
+          {selectedValue && updatedTime && (
+            <Text className="text-[10px] text-gray-400">{updatedTime}</Text>
+          )}
+          <TouchableOpacity onPress={() => alert("Raise Complaint")}>
+            <Icon name="exclamation-circle" size={16} color="red" />
+          </TouchableOpacity>
+        </View>
       </View>
 
-      {/* Modal for options */}
+      {/* Title */}
+      <View className="flex-row px-2 mb-1">
+        <Text className="font-bold text-base mr-2" style={{ color: textColor }}>
+          {item.order}.
+        </Text>
+        <Text style={[styles.title, { color: textColor, fontSize: 17 }]}>
+          {item.title}
+        </Text>
+      </View>
+
+      {/* Dropdown */}
+      <TouchableOpacity
+        className="flex flex-row items-center justify-between px-3 py-2 rounded border border-gray-300"
+        disabled={!editable}
+        onPress={() => setModalVisible(true)}
+        style={{ backgroundColor: nightMode ? "#2C2C2E" : "#F9FAFB" }}
+      >
+        <Text style={{ color: textColor, fontSize: 13 }}>
+          {selectedValue || "Select an option"}
+        </Text>
+        <Icon name="caret-down" size={16} color={iconColor} />
+      </TouchableOpacity>
+
+      {/* Modal */}
       <OptionsModal
         visible={modalVisible}
         options={item?.options?.map((option) => ({
@@ -84,29 +109,22 @@ const DropdownCard = ({ item, onUpdate,editable }) => {
         onClose={() => setModalVisible(false)}
       />
 
-      {/* RemarkCard placed below the dropdown */}
-      <RemarkCard
-        item={item}
-        editable={editable}
-       
-      />
-
-<View className="flex-1 bg-transparent justify-end  px-4 py-2 mt-4 h-8">
-
-         { item.result || item?.data?.optional ? 
-    <View >
-      {selectedValue && updatedTime &&    <Text className="text-gray-500 text-[11px]  font-bold">
-         Updated at : {updatedTime}
-        </Text>}
-    
-                </View>:null}
-                {item?.data?.optional && (
-                  <View className="flex-row justify-end gap-1 items-center absolute bottom-2 right-0">
-                    <Icon name="info-circle" size={16} color="red" />
-                    <Text className="text-xs text-red-800 font-bold mr-2">Optional</Text>
-                  </View>
-                        )}
-   </View>
+      {/* Remarks */}
+      <View className="mt-3">
+        <RemarkCard item={item} editable={editable} />
+        <View className="flex-1 px-2 py-2 mt-2 h-6 justify-end">
+          {(selectedValue || item?.data?.optional) && (
+            <>
+              {selectedValue && updatedTime && (
+                <Text className="text-[10px] text-gray-400 font-bold">
+                  Updated at: {updatedTime}
+                </Text>
+              )}
+  
+            </>
+          )}
+        </View>
+      </View>
     </View>
   );
 };

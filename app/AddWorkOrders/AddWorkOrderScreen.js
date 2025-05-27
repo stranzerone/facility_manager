@@ -16,11 +16,10 @@ import TaskInput from './TextInput/TextInputs';
 import PrioritySelector from './OptionsInputs/PriorityInput';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DynamicPopup from '../DynamivPopUps/DynapicPopUpScreen';
-import { submitWorkOrder } from '../../service/AddWorkOrderApis/CreateWorkOrderApi';
 import { useNavigation } from '@react-navigation/native';
-import GetAssets from '../../service/AddWorkOrderApis/FetchAssests';
-import NetInfo from '@react-native-community/netinfo';
-import { addToQueue } from '../../offline/fileSystem/fileOperations';
+import { workOrderService } from '../../services/apis/workorderApis';
+import { usePermissions } from '../GlobalVariables/PermissionsContext';
+
 const AddWorkOrderScreen = ({screen,type,uuid}) => {
   const [name, setName] = useState('');
   const [dueDate, setDueDate] = useState(null);
@@ -42,7 +41,7 @@ const [workOrderType, setWorkOrderType] = useState("workorder");
 
   const navigation = useNavigation();
 
-
+const {nightMode}  = usePermissions()
 
   const resetForm = () => {
     setName('');
@@ -57,8 +56,6 @@ const [workOrderType, setWorkOrderType] = useState("workorder");
 
   const handleSubmit = async() => {
     setButtonLoading(true)
-    const state = await NetInfo.fetch();
-
     const workOrderData = {
       name,
       dueDate,
@@ -78,10 +75,7 @@ const [workOrderType, setWorkOrderType] = useState("workorder");
         return;
       }
      
-      if (!state.isConnected) {
-        await addToQueue(workOrderData,'workorder')
-      }
-    const response =  await submitWorkOrder(workOrderData);
+    const response =  await workOrderService.createWorkOrder(workOrderData);
     if(response.status == "success"){
       setPopupType('success');
       if(workOrderType==="breakdown"){
@@ -129,7 +123,7 @@ const [workOrderType, setWorkOrderType] = useState("workorder");
     }
     setLoading(true);
     try {
-      const results = await GetAssets(query);
+      const results = await workOrderService.getAsets(query);
       setAssets(results.data);
     } catch (error) {
       console.error('Error fetching assets:', error);
@@ -151,51 +145,45 @@ const [workOrderType, setWorkOrderType] = useState("workorder");
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
         style={{ flex: 1 }}
       >
-        <ScrollView  contentContainerStyle={styles.scrollContainer}>
+        <ScrollView 
+          contentContainerStyle={styles.scrollContainer}
+          scrollEnabled={!optionsOpen && !dropdownOpen}
+          keyboardShouldPersistTaps="handled"
+        >
           <View style={styles.formContainer}>
 
+            {/* Work Order Type Dropdown */}
+            <View style={[styles.dropdownContainer, { zIndex: dropdownOpen ? 1000 : 1 }]}>
+              <Text style={styles.dropdownLabel}>WorkOrder Type</Text>
+              <TouchableOpacity
+                onPress={() => setDropdownOpen(!dropdownOpen)}
+                style={styles.dropdownButton}
+              >
+                <Text style={styles.dropdownButtonText}>{workOrderType || "Select Type"}</Text>
+                <FontAwesome name={dropdownOpen ? "chevron-up" : "chevron-down"} size={16} color="gray" />
+              </TouchableOpacity>
 
-          <View className="flex flex-row justify-between items-center mb-4">
-  {/* Work Order Type Dropdown */}
-  <View className="flex-1 relative">
-    <Text className="text-gray-700 text-md font-bold mt-2">WorkOrder Type</Text>
-    <TouchableOpacity
-      onPress={() => setDropdownOpen(!dropdownOpen)}
-      className="flex-row bg-white border border-gray-400 justify-between rounded-md w-[85vw] items-center px-4 py-2"
-    >
-      <Text className="text-gray-700">{workOrderType || "Select Type"}</Text>
-      <FontAwesome name={dropdownOpen ? "chevron-up" : "chevron-down"} size={16} color="gray" />
-    </TouchableOpacity>
-
-    {dropdownOpen && (
-      <View className="bg-white border border-gray-300 rounded-md shadow-md absolute left-0 mt-16 right-0 z-50">
-        {["workorder", "breakdown"].map((item) => (
-      <TouchableOpacity
-      key={item}
-      onPress={() => {
-        setWorkOrderType(item);
-        setDropdownOpen(false);
-      }}
-      className="flex-row border-b border-gray-300 items-center last:border-b-0 px-4 py-2"
-    >
-      {/* Blue Dot */}
-      <View className="bg-blue-500 h-3 rounded-full w-3 mr-2"></View>
-    
-      {/* Text */}
-      <Text className="text-black font-bold">{item}</Text>
-    </TouchableOpacity>
-    
-        ))}
-      </View>
-    )}
-  </View>
-
-  {/* Breakdown Hours Input (Only if Breakdown is selected) */}
-
-</View>
+              {dropdownOpen && (
+                <View style={styles.dropdownMenu}>
+                  {["workorder", "breakdown"].map((item) => (
+                    <TouchableOpacity
+                      key={item}
+                      onPress={() => {
+                        setWorkOrderType(item);
+                        setDropdownOpen(false);
+                      }}
+                      style={styles.dropdownItem}
+                    >
+                      <View style={styles.dropdownDot}></View>
+                      <Text style={styles.dropdownItemText}>{item}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+            </View>
 
             {/* Search Input with Search & Clear Icons */}
-            <View style={styles.searchContainer}>
+            <View style={[styles.searchContainer, { zIndex: dropdownOpen ? -1 : 1 }]}>
               <Ionicons name="search" size={14} color="gray" style={styles.searchIcon} />
               <TextInput
                 style={styles.input}
@@ -211,41 +199,51 @@ const [workOrderType, setWorkOrderType] = useState("workorder");
             </View>
 
             {loading && <ActivityIndicator size="small" color="#074B7C" />}
-
+            
+      
+            
             {/* Asset List with Icons */}
-        { optionsOpen &&   <ScrollView>
-              {assets?.map((asset, index) => (
-                <TouchableOpacity key={index} style={styles.assetCard} onPress={() => handleSelectAsset(asset)}>
-                  <MaterialIcons name="inventory" size={16} color="#074B7C" />
-                  <Text style={styles.assetText}>{asset.Name}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>}
+            {optionsOpen && (
+              <View style={styles.assetListContainer}>
+                <ScrollView 
+                  style={styles.assetScrollView}
+                  nestedScrollEnabled={true}
+                  showsVerticalScrollIndicator={true}
+                >
+                  {assets?.map((asset, index) => (
+                    <TouchableOpacity key={index} style={styles.assetCard} onPress={() => handleSelectAsset(asset)}>
+                      <MaterialIcons name="inventory" size={16} color="#074B7C" />
+                      <Text style={styles.assetText}>{asset.Name}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
 
-            {/* Selected Asset with Check Icon */}
-            {selectedAsset && (
+      {selectedAsset && (
               <View style={styles.selectedAssetContainer}>
                 <MaterialIcons name="check-circle" size={22} color="#155B74" />
                 <Text style={styles.selectedAssetText}>{selectedAsset.Name}</Text>
               </View>
             )}
-
+            
             <View style={styles.rowContainer}>
               <View style={styles.inputContainer}>
                 <TypeSelector onTypeSelect={setTypeSelected} />
- <View className ='flex-row items-center '>
-      
-      <Text className='text-[10px] text-red-500 ml-1'><FontAwesome6 name="star-of-life" size={8} color="red" /> mandatory</Text>
-    </View>    
+                <View style={styles.mandatoryContainer}>
+                  <Text style={styles.mandatoryText}>
+                    <FontAwesome6 name="star-of-life" size={8} color="red" /> mandatory
+                  </Text>
+                </View>    
               </View>
               <View  style={styles.inputContainer}>
                 <PrioritySelector onPrioritySelect={setPriority} />
-         <View className ='flex-row items-center'>
-      
-          <Text className='text-[10px] text-red-500 ml-1'><FontAwesome6 name="star-of-life" size={8} color="red" /> mandatory</Text>
-    </View>    
-    
-                  </View>
+                <View style={styles.mandatoryContainer}>
+                  <Text style={styles.mandatoryText}>
+                    <FontAwesome6 name="star-of-life" size={8} color="red" /> mandatory
+                  </Text>
+                </View>    
+              </View>
             </View>
 
             <View style={styles.formSection}>
@@ -257,7 +255,6 @@ const [workOrderType, setWorkOrderType] = useState("workorder");
                 onChangeBreakDonwHours={setBreakdownHours}
               />
             </View>
-
 
             <View style={styles.buttonContainer}>
             { buttonLoading ?    
@@ -285,6 +282,91 @@ const [workOrderType, setWorkOrderType] = useState("workorder");
 };
 
 const styles = StyleSheet.create({
+  // Dropdown styles
+  dropdownContainer: {
+    marginBottom: 16,
+    position: 'relative',
+  },
+  dropdownLabel: {
+    color: '#374151',
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  dropdownButton: {
+    flexDirection: 'row',
+    backgroundColor: 'white',
+    borderWidth: 1,
+    borderColor: '#9CA3AF',
+    borderRadius: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  dropdownButtonText: {
+    color: '#374151',
+    fontSize: 16,
+  },
+  dropdownMenu: {
+    position: 'absolute',
+    top: 70,
+    left: 0,
+    right: 0,
+    backgroundColor: 'white',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 5,
+    zIndex: 2000,
+  },
+  dropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#D1D5DB',
+  },
+  dropdownDot: {
+    backgroundColor: '#3B82F6',
+    height: 12,
+    width: 12,
+    borderRadius: 6,
+    marginRight: 8,
+  },
+  dropdownItemText: {
+    color: 'black',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  mandatoryContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  mandatoryText: {
+    fontSize: 10,
+    color: '#EF4444',
+    marginLeft: 4,
+  },
+  // Asset List Container
+  assetListContainer: {
+    marginVertical: 8,
+    borderWidth: 1,
+    borderColor: '#074B7C',
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    maxHeight: 250,
+  },
+  assetScrollView: {
+    maxHeight: 248,
+    paddingHorizontal: 4,
+    paddingVertical: 4,
+  },
   // Existing styles remain unchanged...
   searchContainer: {
     flexDirection: 'row',
@@ -313,23 +395,23 @@ const styles = StyleSheet.create({
     justifyContent:"flex-start",
     paddingVertical: 14,
     paddingHorizontal: 16,
-    marginVertical: 1,
+    marginVertical: 2,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: "#074B7C",
     backgroundColor: '#FFF',
-    elevation: 4,
+    elevation: 2,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
-    shadowRadius: 6,
+    shadowRadius: 3,
   },
   assetText: {
-    fontSize: 12,
+    fontSize: 17,
     fontWeight: '500',
     width:"90%",
     color: '#2C3E50',
-    marginLeft: 0, // Space between icon and text
+    marginLeft: 0,
   },
   selectedAssetContainer: {
     flexDirection: 'row',
@@ -352,8 +434,9 @@ const styles = StyleSheet.create({
   screenContainer: {
     flex: 1,
     width: '100%',
-    backgroundColor: '#F8F9FA',
+    backgroundColor:  '#F8F9FA',
     paddingHorizontal: 20,
+    paddingBottom:30
   },
   scrollContainer: {
     paddingBottom: 40,
@@ -414,32 +497,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-
-
-  assetText: {
-    fontSize: 17,
-    fontWeight: '500',
-    color: '#2C3E50', // Darker grey for readability
-  },
-  
-  selectedAssetContainer: {
-    marginVertical: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    backgroundColor: '#D1ECF1', // Light cyan for better visibility
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#17A2B8', // Matching border with the theme
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  
-  selectedAssetText: {
-    fontSize: 17,
-    fontWeight: 'bold',
-    color: '#155B74', // Deep blue for contrast
-    flex: 1,
-  },
-  });
+});
 
 export default AddWorkOrderScreen;

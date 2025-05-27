@@ -1,11 +1,9 @@
-import React, { useEffect, useLayoutEffect, useState } from 'react';
+import  {  useLayoutEffect, useState } from 'react';
 import { View, TextInput, TouchableOpacity, Text, StyleSheet, Modal } from 'react-native';
 import * as Progress from 'react-native-progress';
-import { usePermissions } from '../GlobalVariables/PermissionsContext';
-import { MarkAsCompleteApi } from '../../service/BuggyListApis/MarkAsCompleteApi';
 import { useNavigation } from '@react-navigation/native';
-import { CommonActions } from '@react-navigation/native';
 import DynamicPopup from '../DynamivPopUps/DynapicPopUpScreen';
+import { workOrderService } from '../../services/apis/workorderApis';
 
 const ProgressPage = ({ data, wo,canComplete,id,sequence,restricted }) => {
   const [remark, setRemark] = useState('');
@@ -61,30 +59,25 @@ if(mandatoryItems.length === manCount){
 
   
   const handleComplete = async () => {
-if(!remark){
+   if(!remark){
   alert('Please Enter Remark To Mark As Complete')
 }else{
 
     try {
       setLock(true)
-      const response =  await MarkAsCompleteApi({item:wo, remark:remark,sequence:sequence});
+      const response =  await workOrderService.markAsCompleteWo({item:wo, remark:remark,sequence:sequence});
       setRemark(''); // Reset the remark input
       setModalVisible(false); // Close the modal
 
-
-      if (response) {
+console.log(response,'this is on complete')
+      if (response.status == "success") {
         setPopUp(true)
         setTimeout(() => {
-          if (id) {
+         console.log("going back")
             navigation.goBack();
-          } else {
-            navigation.dispatch(
-              CommonActions.reset({
-                index: 0,
-                routes: [{ name: 'Home' }],
-              })
-            );
-          }
+          
+          
+          
         }, 1500); // ⏳ Delay navigation by 2 seconds
       }
       

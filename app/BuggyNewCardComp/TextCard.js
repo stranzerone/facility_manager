@@ -6,26 +6,44 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  StyleSheet,
+  Image,
+  TouchableOpacity,
 } from "react-native";
 import RemarkCard from "./RemarkCard";
-import styles from "../BuggyListCardComponets/InputFieldStyleSheet";
-import { UpdateInstructionApi } from "../../service/BuggyListApis/UpdateInstructionApi";
+import styles from "./styles";
 import Icon from "react-native-vector-icons/FontAwesome";
 import useConvertToSystemTime from "../TimeConvertot/ConvertUtcToIst";
+import { workOrderService } from "../../services/apis/workorderApis";
+import { usePermissions } from "../GlobalVariables/PermissionsContext";
 
 const TextCard = ({ item, onUpdate, editable, type }) => {
+  const { nightMode } = usePermissions();
   const [value, setValue] = useState(item.result || "");
-  const updatedTime =useConvertToSystemTime(item?.updated_at)
+  const updatedTime = useConvertToSystemTime(item?.updated_at);
+
+  const backgroundColor = editable
+    ? value
+      ? nightMode ? "#2C2C2E" : "#DFF6DD"
+      : nightMode ? "#1C1C1E" : "#FFFFFF"
+    : value
+      ? nightMode ? "#2C2C2E" : "#DCFCE7"
+      : nightMode ? "#1C1C1E" : "#E5E7EB";
+
+  const textColor = nightMode ? "#E5E5EA" : "#1F2937";
+  const inputBG = nightMode ? "#2C2C2E" : "#F9FAFB";
+  const inputText = nightMode ? "#F5F5F5" : "#111827";
+
   const handleBlur = async () => {
     try {
       const payload = {
         id: item.id,
-        value: value.trim(),
+        result: value.trim(),
         WoUuId: item.ref_uuid,
         image: false,
       };
 
-      await UpdateInstructionApi(payload);
+      await workOrderService.updateInstruction(payload);
       onUpdate();
     } catch (error) {
       console.error("Error updating instruction:", error);
@@ -34,58 +52,65 @@ const TextCard = ({ item, onUpdate, editable, type }) => {
   };
 
   return (
-    <View
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={{ flex: 1 }}
-    >
-      <View
-        style={[
-          styles.inputContainer,
-          editable?value? { backgroundColor: "#DFF6DD" } :{backgroundColor:"white"}:value?{ backgroundColor: "#DCFCE7" } : { backgroundColor: "#E5E7EB" }, // Light green if a value is selected
+    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
+      <View style={[styles.inputContainer, { backgroundColor }]} className="p-3 border border-gray-200 rounded-md mb-3 shadow-sm">
 
-        ]}
-      >
-     <View className="flex-row p-2">
-      <Text className="font-bold  text-xl mr-2">{item.order}.</Text>
-      
-      <Text style={styles.title}>{item.title}</Text>
+        {/* Header Section */}
+        <View className="flex-row items-center justify-between mb-2">
+          <View className="flex-row items-center gap-2">
+            <Image
+              source={{ uri: 'https://randomuser.me/api/portraits/men/1.jpg' }}
+              style={{ width: 24, height: 24, borderRadius: 4 }}
+            />
+            <Icon name="file-text" size={18} color={nightMode ? "#A1A1AA" : "#1F2937"} />
+            {item?.data?.optional && (
+ <View className="flex-row items-center">
+              
+            <Icon name="info-circle" size={16} color="orange" />
+            <Text className="ml-1 text-red-700 font-bold">Optional</Text>
+            </View>                )}
+          </View>
 
-      </View>
+          <View className="flex-row items-center gap-3">
+            {value && updatedTime && (
+              <Text className="text-xs text-gray-400">{updatedTime}</Text>
+            )}
+            <TouchableOpacity onPress={() => alert('Raise Complaint')}>
+              <Icon name="exclamation-circle" size={18} color="red" />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Title */}
+        <View className="flex-row items-start p-2">
+          <Text className="font-bold text-lg mr-2" style={{ color: textColor }}>{item.order}.</Text>
+          <Text style={[styles.title, { color: textColor }]}>{item.title}</Text>
+        </View>
+
+        {/* Input or Result */}
         {editable ? (
           <TextInput
-            style={styles.inputContainer}
+            style={[styles.inputContainer, {
+              backgroundColor: inputBG,
+              color: inputText,
+              padding: 8,
+              borderRadius: 6,
+            }]}
             value={value}
             onChangeText={setValue}
             keyboardType={type === "number" ? "numeric" : "default"}
             onBlur={handleBlur}
             placeholder={type === "number" ? "Enter Numerical Value" : "Enter your text"}
+            placeholderTextColor={nightMode ? "#A1A1AA" : "#9CA3AF"}
           />
         ) : (
-          <Text style={styles.inputContainer}>{item.result}</Text>
+          <Text style={[styles.inputContainer, { color: textColor }]}>{item.result}</Text>
         )}
 
+        {/* Remarks */}
         <RemarkCard item={item} editable={editable} />
-
-     
-<View className="flex-1 bg-transparent justify-end  px-4 py-2 mt-4 h-8">
-
-   { item.result || item?.data?.optional ?  
-    <View >
-{item.result && updatedTime &&  <Text className="text-gray-500 text-[11px]  font-bold">
-   Updated at : {updatedTime}
-  </Text>}
-
-          </View>:null}
-          {item?.data?.optional && (
-            <View className="flex-row justify-end gap-1 items-center absolute bottom-2 right-0">
-              <Icon name="info-circle" size={16} color="red" />
-              <Text className="text-xs text-red-800 font-bold mr-2">Optional</Text>
-            </View>
-                  )}
-          </View>
-  
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 };
 

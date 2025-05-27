@@ -1,44 +1,60 @@
+// ApiCommon.js
+import { Interceptor } from '../../utils/AxiosInterceptor/interceptor';
+
 export const ApiCommon = {
-    getReq : (url, headers) => {
-        return ApiCommon.fetchReq(url, 'GET', null, headers)
-    },
-    postReq : (url, data, headers) => {
-       
-        return ApiCommon.fetchReq(url, 'POST', data, headers)
-    },
-    putReq : (url, data, headers) => {
-        return ApiCommon.fetchReq(url, 'PUT', data, headers)
-    },
-    delReq : (url, data, headers) => {
-        return ApiCommon.fetchReq(url, 'DELETE', data, headers)
-    },
+  getReq: (url, headers,params) => {
+    return ApiCommon.fetchReq(url, 'GET', null, headers,params);
+  },
+  postReq: (url, data, headers) => {
+    return ApiCommon.fetchReq(url, 'POST', data, headers);
+  },
+  putReq: (url, data, headers) => {
+    return ApiCommon.fetchReq(url, 'PUT', data, headers);
+  },
+  delReq: (url, data, headers) => {
+    return ApiCommon.fetchReq(url, 'DELETE', data, headers);
+  },
 
+fetchReq: async (url, method, data, headers, params) => {
+  // 🔄 Interceptor before request
+  const intercepted = await Interceptor.request(url, method, data, headers, params);
 
-    
-    fetchReq : async(url, method, data, headers) => {
-        let conf = {
-            method: method,
-            headers: headers ? headers : {
-                "Content-Type": "application/json",
-            },
-        }
-        if (method !== 'GET' && data) {
-            conf.body = conf.headers && conf.headers['Content-Type']==="application/json" ? JSON.stringify(data) : data
-        }
+  // ✅ Return mock data immediately if offline and cached data is available
+  if (intercepted?.fromCache) {
+    console.log('📦 Returning cached response from Interceptor');
+    return intercepted;
+  }
 
-        // add auth params in headers / url
-        const response = await fetch(url, conf);
-        if (!response.ok) {
-            // If the response status is not OK, throw an error
-            console.error('Error in response:', response.statusText);
-            throw new Error(`HTTP error! Status: ${response.status}`);
-        }
+  // Update values from interceptor
+  url = intercepted.url;
+  method = intercepted.method;
+  data = intercepted.data; // Fix: was incorrectly using intercepted.params
+  headers = intercepted.headers;
 
-       const responseData = await response.json();
-       console.log("Response Data:", responseData);
-        return responseData;
-    }
+  let conf = {
+    method: method,
+    headers: headers || {
+      'Content-Type': 'application/json',
+    },
+  };
+
+  if (method !== 'GET' && data) {
+    conf.body =
+      conf.headers && conf.headers['Content-Type'] === 'application/json'
+        ? JSON.stringify(data)
+        : data;
+  }
+
+  const response = await fetch(url, conf);
+  console.log(response, '📥 Raw Response');
+
+  if (!response.ok) {
+    console.error('❌ Error in response:', response.statusText);
+    throw new Error(`HTTP error! Status: ${response.status}`);
+  }
+
+  const responseData = await response.json();
+  console.log('✅ Parsed Response:', responseData);
+  return responseData;
 }
-
-
-
+}

@@ -1,4 +1,5 @@
 import { ApiCommon } from "../ApiCommon";
+import { Common } from "../Common";
 import { Util } from "../Util";
 import { API_URL2 } from "@env";
 
@@ -36,6 +37,22 @@ export const complaintService = {
     const headers = await Util.getCommonAuth()
 
     return await ApiCommon.postReq(url, payload, headers);
+  },
+
+
+    closeComplaint : async (payload) => {
+     let user = await Common.getLoggedInUser()
+    console.log(user, "user in close complaint service")
+
+
+
+ console.log(payload,'this is paylod for clsoe complaint')
+    const url = `${API_URL2}/staff/updatecomplaint`;
+    const headers = await Util.getCommonAuth()
+    const response =  await ApiCommon.putReq(url, payload, headers);
+    console.log(response,'this is for clsoe complaint')
+    return response;
+
   },
 
 
