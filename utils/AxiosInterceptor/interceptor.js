@@ -1,209 +1,110 @@
 import NetInfo from "@react-native-community/netinfo";
-import mockData from './mockData.json'; // Local offline fallback data
-import comlaints from "./mockComplaintData.json"
+import complaints from "./mockComplaintData.json";
 import { addToQueue } from "../../offline/fileSystem/fileOperations";
+import ch_maps from "./ch_maps.json";
+import ch_workorders from "./ch_workorders.json";
+import ch_instructions from "./ch_instructions.json";
+
+// Utility: map workorder UUIDs to { as: {}, st: {}, wo }
+const mapWorkorders = (ids = []) => {
+  return ids
+    .map(id => {
+      const wo = ch_workorders[id];
+      return wo ? { as: {}, st: {}, wo } : null;
+    })
+    .filter(Boolean);
+};
+
+// Utility: map all workorders
+const mapAllWorkorders = () => {
+  return Object.values(ch_workorders).map(wo => ({
+    as: {},
+    st: {},
+    wo,
+  }));
+};
 
 export const Interceptor = {
   request: async (url, method, data, headers, params) => {
-
-
     const netState = await NetInfo.fetch();
     const isOffline = !netState.isConnected;
 
-    console.log(isOffline,'this is offline')
     if (!isOffline) {
       return { url, method, data, headers };
     }
-    
+    console.log("inside offline call")
 
-
-
-    let cachedResponse = null;
-
+    // Handle GET
     if (method === "GET") {
-      console.log("GET",url,params)
-      // Switch block for offline URL matches
+      const responseTemplate = {
+        status: 'success',
+        fromCache: true,
+        message: 'matching data found from offline cache',
+        data: [],
+      };
+
       switch (true) {
         case url.includes('/v3/workorder/filter'):
-          cachedResponse = handleAssignedWorkordersByAsset(params);
-          break;
+          return { ...responseTemplate, data: mapAllWorkorders() };
 
-               case url.includes('/v3/workorder/assigned/asset?'):
-          cachedResponse = handleAssignedWorkordersByAsset(params);
-          break;
+        case url.includes('/v3/workorder/assigned/asset?'):
+          const assetIDs = ch_maps.asset_wo_map[params?.asset_uuid] || [];
+          return { ...responseTemplate, data: mapWorkorders(assetIDs) };
 
         case url.includes('/v3/workorder/assigned/location?'):
-          cachedResponse = handleAssignedWorkordersByAsset(params);
-          break;
+          const locationIDs = ch_maps.location_wo_map[params?.location_uuid] || [];
+          return { ...responseTemplate, data: mapWorkorders(locationIDs) };
 
         case url.includes('/v3/insts'):
-          cachedResponse = handleAssignedWorkordersByAsset(params);
-          break;
+          return {
+            ...responseTemplate,
+            data: ch_instructions[params?.ref_uuid]?.instructions || [],
+          };
 
         case url.includes('/staff/mycomplaints'):
-          cachedResponse = handleComplaints(params);
-          break;
-        // Add more offline endpoints here as needed
-        default:
-          break;
-      }
-    }
-
-    if (method === "PUT") {
-      // Switch block for offline URL matches
-      switch (true) {
-        case url.includes('/staff/updatecomplaint'):
-          await addToQueue("closeComplaint", data)
-          break;
-
-
-        case url.includes('/v3/workorder'):
-          await addToQueue("markCompleteWo", data)
-          break;
-
-         case url.includes('/staff/updatecomplaint'):
-          await addToQueue("closeComplaint", data)
-          break;
-        // Add more offline endpoints here as needed
-        default:
-          break;
-      }
-    }
-
-
-
-
-
-
-    if (method === "POST") {
-
-      // Switch block for offline URL matches
-      switch (true) {
-        case url.includes('/v3/insts'):
-          await addToQueue(data, "updateInstruction");
-          break;
-
-        // Add more offline POST endpoints here as needed
-        case url.includes('/publicupload'):
-          await addToQueue(data, "pdfFile");
-          break;
-
-        case url.includes('/v3/comments'):
-          await addToQueue(data, "woComments");
-          break;
-
-             case url.includes('/addComplaint'):
-          await addToQueue(data, "complaint");
-          break;
-
-                 case url.includes('/staff/addcomment'):
-          await addToQueue(data, "complaint");
-          break;
+          return { ...responseTemplate, data: complaints };
 
         default:
           break;
       }
 
-      // Return standard offline POST response
       return {
         status: 'success',
         fromCache: true,
         data: [],
-        message: 'Added to queue',
+        message: 'No matching offline cache or data not found',
       };
     }
 
+    else if(method !== "GET") {
+      try {
+        await addToQueue("queueData", {
+          url,
+          method,
+          payload: data,
+        });
 
-
-
-
-
-
-
-    // Return offline cached data if found
-    if (cachedResponse) {
-      return {
-        ...cachedResponse,
-        fromCache: true,
-        status: 'success',
-      };
+        return {
+          status: 'success',
+          fromCache: true,
+          message: 'Request queued successfully (offline mode)',
+        };
+      } catch (err) {
+        return {
+          status: 'error',
+          fromCache: true,
+          message: 'Failed to queue request',
+          error: err.message,
+        };
+      }
     }
 
-    // Default empty response for unmatched offline requests
+    // Default fallback
     return {
       status: 'success',
       fromCache: true,
       data: [],
-      message: 'No matching offline cache or data not found',
+      message: 'Offline request type not handled',
     };
   }
-};
-
-
-const handleAssignedWorkordersByAsset = (params) => {
-  console.log(params, 'this are params')
-  const assetUUID = params?.asset_uuid;
-  const ref_uuid = params?.ref_uuid
-  const loc_uuid = params?.location_uuid
- const selectedFilter = params?.Status
- console.log(params,'this is params')
-  console.log(assetUUID, ref_uuid, loc_uuid, 'this are botg id')
-  if (loc_uuid && selectedFilter) {
-
-    const location = mockData.data.find(loc => loc.uuid === loc_uuid);
-
-    if (!location) return []; // Location not found
-
-    let allWorkOrders = [];
-
-    for (const asset of location.assets || []) {
-      if (asset.workorders && Array.isArray(asset.workorders)) {
-        allWorkOrders = allWorkOrders.concat(asset.workorders);
-      }
-    }
-
-    return { data: allWorkOrders || [] };
-
-  }
-else if (selectedFilter) {
-  let allWorkorders = [];
-
-  for (const location of mockData.data) {
-    for (const asset of location.assets) {
-      if (Array.isArray(asset.workorders)) {
-        const filteredWorkorders = asset.workorders.filter(
-          (wo) => wo.wo?.Status === selectedFilter
-        );
-        allWorkorders.push(...filteredWorkorders);
-      }
-    }
-  }
-
-  return { data: allWorkorders };
-}
-
-  for (const location of mockData.data) {
-    const asset = location.assets.find((a) => a.uuid === assetUUID);
-    if (asset && !ref_uuid) {
-      return { data: asset.workorders || [] };
-    }
-    if (asset && ref_uuid) {
-      console.log(wo, 'this is wor for instructions retyrn')
-      const wo = asset?.workorders.find((a) => a.wo.uuid === ref_uuid);
-      if (wo)
-        return { data: wo.wo.instructions || [] };
-    }
-  }
-
-  return { data: [], message: 'Asset not found in offline cache' };
-};
-
-
-
-
-const handleComplaints = () => {
-  return { data: comlaints || [] };
-
-
-
 };

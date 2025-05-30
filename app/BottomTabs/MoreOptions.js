@@ -50,7 +50,7 @@ const OfflineSyncDashboard = () => {
   
   // Sync stats
   const [syncStats, setSyncStats] = useState({
-    queuedItems: 24,
+    setQueueStatus: 24,
     completedItems: 156,
     downloadedData: "104.5 MB",
     uploadedData: "42.8 MB",
@@ -133,7 +133,7 @@ useEffect(() => {
       // Update stats
       setSyncStats({
         ...syncStats,
-        queuedItems: Math.max(0, syncStats.queuedItems - 5),
+        setQueueStatus: Math.max(0, syncStats.setQueueStatus - 5),
         completedItems: syncStats.completedItems + 5,
         lastSynced: "Just now",
       });
@@ -305,7 +305,7 @@ useEffect(() => {
               alignItems: "center"
             }}>
               <Text style={{ color: colors.accent, fontSize: 24, fontWeight: "700" }}>
-                {syncStats.queuedItems}
+                {syncStats.setQueueStatus}
               </Text>
               <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: "600", marginTop: 4 }}>
                 Queued

@@ -1,5 +1,5 @@
-import { useNavigation } from "@react-navigation/native";
-import React, { useState } from "react";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import React, { useCallback, useEffect, useLayoutEffect, useState, useRef } from "react";
 import {
   View,
   Text,
@@ -9,9 +9,12 @@ import {
   Platform,
   StatusBar,
   useColorScheme,
+  Animated,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { usePermissions } from "../GlobalVariables/PermissionsContext";
+import { getQueueLength } from "../../offline/fileSystem/fileOperations";
+import { syncOfflineQueue } from "../../offline/fileSystem/offlineSync";
 
 const TechnicianDashboard = () => {
   const navigation = useNavigation();
@@ -19,35 +22,40 @@ const TechnicianDashboard = () => {
   const isTablet = width >= 768;
   const [animatedCards, setAnimatedCards] = useState({});
   const [refreshing, setRefreshing] = useState(false);
-
-  // Dark mode detection
+  const { queueLength, syncStatus } = usePermissions();
+  const [queueLenghtFile, setQueueLengthFile] = useState(0);
+  
+  // Animation refs for sync status
+  const cloudAnimation = useRef(new Animated.Value(0)).current;
+  const pulseAnimation = useRef(new Animated.Value(1)).current;
+  const rotateAnimation = useRef(new Animated.Value(0)).current;
+  
   const systemColorScheme = useColorScheme();
-  const {nightMode}  = usePermissions()
-  const isDarkMode =  nightMode;
+  const { nightMode } = usePermissions();
+  const isDarkMode = nightMode;
 
   // Color schemes
-const CUSTOM_PRIMARY = "#1996D3"; // 🔷 Replace this with your actual brand color
+  const CUSTOM_PRIMARY = "#1996D3"; // 🔷 Replace this with your actual brand color
 
-const lightTheme = {
-  primaryColor: CUSTOM_PRIMARY,
-  backgroundColor: "#F2F2F7",
-  cardBackground: "#FFFFFF",
-  textPrimary: "#000000",
-  textSecondary: "#6D6D70",
-  shadowColor: "#000000",
-  statusBarStyle: "dark-content",
-};
+  const lightTheme = {
+    primaryColor: CUSTOM_PRIMARY,
+    backgroundColor: "#F2F2F7",
+    cardBackground: "#FFFFFF",
+    textPrimary: "#000000",
+    textSecondary: "#6D6D70",
+    shadowColor: "#000000",
+    statusBarStyle: "dark-content",
+  };
 
-const darkTheme = {
-  primaryColor: CUSTOM_PRIMARY,
-  backgroundColor: "#000000",
-  cardBackground: "#1C1C1E",
-  textPrimary: "#FFFFFF",
-  textSecondary: "#8E8E93",
-  shadowColor: "#FFFFFF",
-  statusBarStyle: "light-content",
-};
-
+  const darkTheme = {
+    primaryColor: CUSTOM_PRIMARY,
+    backgroundColor: "#000000",
+    cardBackground: "#1C1C1E",
+    textPrimary: "#FFFFFF",
+    textSecondary: "#8E8E93",
+    shadowColor: "#FFFFFF",
+    statusBarStyle: "light-content",
+  };
 
   // Current theme based on mode
   const theme = isDarkMode ? darkTheme : lightTheme;
@@ -58,6 +66,81 @@ const darkTheme = {
     queuedItems: 3,
     lastSynced: "10:45 AM"
   };
+
+  // Sync animations
+  useEffect(() => {
+    if (syncStatus) {
+      // Start all animations when syncing
+      const cloudAnim = Animated.loop(
+        Animated.sequence([
+          Animated.timing(cloudAnimation, {
+            toValue: 1,
+            duration: 1500,
+            useNativeDriver: true,
+          }),
+          Animated.timing(cloudAnimation, {
+            toValue: 0,
+            duration: 1500,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+
+      const pulseAnim = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnimation, {
+            toValue: 1.1,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnimation, {
+            toValue: 1,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+
+      const rotateAnim = Animated.loop(
+        Animated.timing(rotateAnimation, {
+          toValue: 1,
+          duration: 2000,
+          useNativeDriver: true,
+        })
+      );
+
+      cloudAnim.start();
+      pulseAnim.start();
+      rotateAnim.start();
+
+      return () => {
+        cloudAnim.stop();
+        pulseAnim.stop();
+        rotateAnim.stop();
+      };
+    } else {
+      // Reset animations when not syncing
+      cloudAnimation.setValue(0);
+      pulseAnimation.setValue(1);
+      rotateAnimation.setValue(0);
+    }
+  }, [syncStatus]);
+
+  // Interpolated values for animations
+  const cloudTranslateY = cloudAnimation.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, -8],
+  });
+
+  const cloudOpacity = cloudAnimation.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [1, 0.6, 1],
+  });
+
+  const rotateInterpolate = rotateAnimation.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
 
   // Technician work data with theme-aware colors
   const workCategories = [
@@ -111,13 +194,28 @@ const darkTheme = {
     setAnimatedCards(prev => ({ ...prev, [key]: false }));
   };
 
-  const handleRefresh = () => {
+  const handleRefresh = async() => {
     setRefreshing(true);
+    await syncOfflineQueue();
     // Simulate refresh - in production, replace with actual sync logic
     setTimeout(() => {
       setRefreshing(false);
     }, 1500);
   };
+
+  console.log(queueLength, 'this is queuelength at init');
+
+useFocusEffect(
+  useCallback(() => {
+    const updateQueue = async () => {
+      console.log("called to check length");
+      const length = await getQueueLength('queueData');
+      setQueueLengthFile(length);
+    };
+
+    updateQueue();
+  }, [syncStatus])
+);;
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.backgroundColor }}>
@@ -141,9 +239,54 @@ const darkTheme = {
           elevation: 4,
         }}>
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-            <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "600" }}>
-              Offline Sync
-            </Text>
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "600", marginRight: 8 }}>
+                Offline Sync
+              </Text>
+              {syncStatus && (
+                <View style={{ flexDirection: "row", alignItems: "center" }}>
+                  {/* Animated syncing indicator dots */}
+                  <Animated.View style={{
+                    width: 4,
+                    height: 4,
+                    borderRadius: 2,
+                    backgroundColor: "rgba(255, 255, 255, 0.8)",
+                    marginRight: 2,
+                    transform: [{ 
+                      translateY: cloudAnimation.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [0, -3],
+                      })
+                    }],
+                  }} />
+                  <Animated.View style={{
+                    width: 4,
+                    height: 4,
+                    borderRadius: 2,
+                    backgroundColor: "rgba(255, 255, 255, 0.6)",
+                    marginRight: 2,
+                    transform: [{ 
+                      translateY: cloudAnimation.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [0, -3],
+                      })
+                    }],
+                  }} />
+                  <Animated.View style={{
+                    width: 4,
+                    height: 4,
+                    borderRadius: 2,
+                    backgroundColor: "rgba(255, 255, 255, 0.4)",
+                    transform: [{ 
+                      translateY: cloudAnimation.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [0, -3],
+                      })
+                    }],
+                  }} />
+                </View>
+              )}
+            </View>
             <Pressable 
               onPress={handleRefresh}
               style={({ pressed }) => ({ 
@@ -153,19 +296,22 @@ const darkTheme = {
                 borderRadius: 20,
               })}
             >
-              <Feather 
-                name={refreshing ? "loader" : "refresh-cw"} 
-                size={16} 
-                color="#FFFFFF" 
-                style={refreshing ? { transform: [{ rotate: '45deg' }] } : {}}
-              />
+              <Animated.View style={{
+                transform: [{ rotate: refreshing ? rotateInterpolate : '0deg' }]
+              }}>
+                <Feather 
+                  name={refreshing ? "loader" : "refresh-cw"} 
+                  size={16} 
+                  color="#FFFFFF" 
+                />
+              </Animated.View>
             </Pressable>
           </View>
           
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
             <View style={{ flexDirection: "row", alignItems: "center" }}>
-              {/* Sync Status */}
-              <View style={{ 
+              {/* Sync Status with Animation */}
+              <Animated.View style={{ 
                 width: 60, 
                 height: 60, 
                 borderRadius: 30, 
@@ -175,23 +321,71 @@ const darkTheme = {
                 marginRight: 14,
                 borderWidth: 4,
                 borderColor: "rgba(255, 255, 255, 0.5)",
+                transform: [{ scale: syncStatus ? pulseAnimation : 1 }],
               }}>
-                <Feather name="cloud" size={22} color="#FFFFFF" />
-              </View>
+                <Animated.View style={{
+                  transform: [
+                    { translateY: syncStatus ? cloudTranslateY : 0 },
+                  ],
+                  opacity: syncStatus ? cloudOpacity : 1,
+                }}>
+                  <Feather 
+                    name={syncStatus ? "upload-cloud" : "cloud"} 
+                    size={22} 
+                    color="#FFFFFF" 
+                  />
+                </Animated.View>
+                
+                {/* Additional animated elements for active sync */}
+                {syncStatus && (
+                  <>
+                    <Animated.View style={{
+                      position: 'absolute',
+                      width: 8,
+                      height: 8,
+                      borderRadius: 4,
+                      backgroundColor: 'rgba(255, 255, 255, 0.4)',
+                      top: 15,
+                      right: 15,
+                      transform: [{ 
+                        scale: cloudAnimation.interpolate({
+                          inputRange: [0, 0.5, 1],
+                          outputRange: [0, 1, 0],
+                        })
+                      }],
+                    }} />
+                    <Animated.View style={{
+                      position: 'absolute',
+                      width: 6,
+                      height: 6,
+                      borderRadius: 3,
+                      backgroundColor: 'rgba(255, 255, 255, 0.3)',
+                      top: 20,
+                      left: 18,
+                      transform: [{ 
+                        scale: cloudAnimation.interpolate({
+                          inputRange: [0, 0.3, 0.7, 1],
+                          outputRange: [0, 0, 1, 0],
+                        })
+                      }],
+                    }} />
+                  </>
+                )}
+              </Animated.View>
               
               <View>
                 <Text style={{ color: "#FFFFFF", fontSize: 14 }}>
                   {syncData.syncedItems} <Text style={{ fontSize: 12, opacity: 0.8 }}>items synced</Text>
                 </Text>
                 <Text style={{ color: "#FFFFFF", fontSize: 12, opacity: 0.7, marginTop: 2 }}>
-                  Last: {syncData.lastSynced}
+                  {syncStatus ? "Syncing..." : `Last: ${syncData.lastSynced}`}
                 </Text>
               </View>
             </View>
             
             <View style={{ alignItems: "center" }}>
               <Text style={{ color: "#FFFFFF", fontSize: 24, fontWeight: "bold" }}>
-                {syncData.queuedItems}
+                {queueLenghtFile}
               </Text>
               <Text style={{ color: "#FFFFFF", fontSize: 12, opacity: 0.8 }}>
                 Queue

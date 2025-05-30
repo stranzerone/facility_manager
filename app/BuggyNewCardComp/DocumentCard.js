@@ -135,7 +135,7 @@ const DocumentCard = ({ item, onUpdate, editable }) => {
 
       {/* Title */}
       <View className="flex-row p-2">
-        <Text className="font-bold text-xl mr-2" style={{ color: textColor }}>{item.order}.</Text>
+        <Text className="font-bold text-md mr-2" style={{ color: textColor }}>{item.order}.</Text>
         <Text style={[styles.title, { color: textColor }]}>{item.title}</Text>
       </View>
 
@@ -181,18 +181,7 @@ const DocumentCard = ({ item, onUpdate, editable }) => {
       {/* Remarks + Optional */}
       <View className="mt-4">
         <RemarkCard item={item} editable={editable} />
-        <View className="flex-1 bg-transparent justify-end px-4 py-2 mt-4 h-8">
-          {(item.result || item?.data?.optional) && (
-            <>
-              {item.result && updatedTime && (
-                <Text className="text-gray-500 text-[11px] font-bold">
-                  Updated at: {updatedTime}
-                </Text>
-              )}
-             
-            </>
-          )}
-        </View>
+
       </View>
     </View>
   );

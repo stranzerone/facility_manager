@@ -18,6 +18,7 @@ export const writeToFile = async (fileName, data) => {
 
 export const readFromFile = async (fileName) => {
   try {
+    console.log(fileName,'this file is requested')
     const fileUri = FileSystem.documentDirectory + fileName;
 
     const fileInfo = await FileSystem.getInfoAsync(fileUri);
@@ -25,14 +26,25 @@ export const readFromFile = async (fileName) => {
       console.warn(`⚠️ File not found: ${fileUri}`);
       return null;
     }
-
+console.log(fileInfo,'this is fileinfo')
     const content = await FileSystem.readAsStringAsync(fileUri, {
       encoding: FileSystem.EncodingType.UTF8,
     });
+    console.log(content,'this is conetent for file trued to load')
     return content;
   } catch (error) {
     console.error('❌ Error reading file:', error);
     return null;
+  }
+};
+
+export const saveQueue = async (name, queue) => {
+  const QUEUE_FILE_PATH = `${FileSystem.documentDirectory}${name}.json`;
+  try {
+    await FileSystem.writeAsStringAsync(QUEUE_FILE_PATH, JSON.stringify(queue));
+    console.log("✅ Queue saved");
+  } catch (error) {
+    console.log("❌ Error saving queue", error);
   }
 };
 
@@ -45,8 +57,8 @@ export const saveImage = async (uri, filename) => {
   return dest; // Return the new local URI
 };
 
-export const addToQueue = async (data, name) => {
-  const QUEUE_FILE_PATH = `${FileSystem.documentDirectory}${name}Queue.json`;
+export const addToQueue = async (name, data) => {
+  const QUEUE_FILE_PATH = `${FileSystem.documentDirectory}${name}.json`;
 
   try {
     const existing = await FileSystem.readAsStringAsync(QUEUE_FILE_PATH).catch(() => '[]');
@@ -59,8 +71,42 @@ export const addToQueue = async (data, name) => {
   }
 };
 
+
+export const removeFromQueue = async (name, data) => {
+  const QUEUE_FILE_PATH = `${FileSystem.documentDirectory}${name}.json`;
+
+  try {
+    const existing = await FileSystem.readAsStringAsync(QUEUE_FILE_PATH).catch(() => '[]');
+    let queue = JSON.parse(existing);
+
+    // Filter out the matching item (based on URL and payload)
+    const filteredQueue = queue.filter(
+      item => !(item.url === data.url && JSON.stringify(item.payload) === JSON.stringify(data.payload))
+    );
+
+    await FileSystem.writeAsStringAsync(QUEUE_FILE_PATH, JSON.stringify(filteredQueue));
+    console.log("🗑️ Removed item from queue:", data.url);
+  } catch (error) {
+    console.log("❌ Error removing from queue:", error);
+  }
+};
+
+export const getQueueLength = async (name) => {
+  const QUEUE_FILE_PATH = `${FileSystem.documentDirectory}${name}.json`;
+
+  try {
+    const existing = await FileSystem.readAsStringAsync(QUEUE_FILE_PATH).catch(() => '[]');
+    const queue = JSON.parse(existing);
+    return queue.length;
+  } catch (error) {
+    console.log("❌ Error reading queue length:", error);
+    return 0;
+  }
+};
+
 export const getQueue = async (name) => {
-  const QUEUE_FILE_PATH = `${FileSystem.documentDirectory}${name}Queue.json`;
+  console.log("getting queue for sync")
+  const QUEUE_FILE_PATH = `${FileSystem.documentDirectory}${name}.json`;
 
   try {
     const content = await FileSystem.readAsStringAsync(QUEUE_FILE_PATH);
@@ -71,7 +117,7 @@ export const getQueue = async (name) => {
 };
 
 export const clearQueue = async (name) => {
-  const QUEUE_FILE_PATH = `${FileSystem.documentDirectory}${name}Queue.json`;
+  const QUEUE_FILE_PATH = `${FileSystem.documentDirectory}${name}.json`;
   console.log(QUEUE_FILE_PATH,'this queue is cleared')
 
   try {

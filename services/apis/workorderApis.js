@@ -268,6 +268,7 @@ export const workOrderService = {
     const url = workOrderService.appendParamsInUrl(`${API_URL}/v3/workorder/assigned/asset?`, params);
     const headers = await Util.getCommonAuth()
     const response = await ApiCommon.getReq(url, headers, params);
+    console.log(response,'this is resposne on api')
     return response
   },
 
@@ -339,7 +340,9 @@ export const workOrderService = {
   getInstructionsComments: async (params) => {
     const url = workOrderService.appendParamsInUrl(`${API_URL}/v3/comments?`, params);
     const headers = await Util.getCommonAuth()
-    return await ApiCommon.getReq(url, headers);
+    const response =  await ApiCommon.getReq(url, headers);
+    console.log("these are response")
+    return response
   },
 
 

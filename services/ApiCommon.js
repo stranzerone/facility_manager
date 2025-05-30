@@ -21,7 +21,8 @@ fetchReq: async (url, method, data, headers, params) => {
 
   // ✅ Return mock data immediately if offline and cached data is available
   if (intercepted?.fromCache) {
-    console.log('📦 Returning cached response from Interceptor');
+    console.log('📦 Returning cached response from Interceptor',intercepted);
+
     return intercepted;
   }
 

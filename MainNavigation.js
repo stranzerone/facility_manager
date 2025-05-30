@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState,useEffect } from 'react';
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
@@ -15,13 +15,16 @@ import UpdateAppScreen from './app/TabNavigatorsWo/VersionHandler';
 import CameraScreen from './app/GlobalVariables/CameraScreen';
 import RequestServiceTabs from './app/ServiceTab/RequestServiceTopTabs';
 import { PermissionsProvider, usePermissions } from './app/GlobalVariables/PermissionsContext';
-
+import Toast from 'react-native-toast-message'; // ✅ Required
+import NetInfo from '@react-native-community/netinfo';
+import { syncOfflineQueue } from './offline/fileSystem/offlineSync.js';
 const Stack = createNativeStackNavigator();
 
 // Wrap navigator to use context inside
 const MainNavigator = () => {
   const { nightMode } = usePermissions();
   const [modalVisible] = useState(true);
+const{syncStatus,setSyncStatus,queueLength,setQueueLength}  = usePermissions()
 
   const MyDarkTheme = {
     ...DarkTheme,
@@ -38,6 +41,52 @@ const MainNavigator = () => {
       background: '#ffffff',
     },
   };
+
+
+  useEffect(() => {
+    let syncInProgress = false;
+    let previousIsConnected = false;
+
+    const unsubscribe = NetInfo.addEventListener(state => {
+      const isNowOnline = state.isConnected;
+       
+      // Only trigger sync if coming online and not already syncing
+      if (isNowOnline && !previousIsConnected && !syncInProgress) {
+        syncInProgress = true;
+        setSyncStatus(true)
+        //  setSyncStarted(true)
+        setTimeout(async () => {
+          try {
+            console.log(queueLength,"this are on callling sync in")
+            setSyncStatus(true)
+            await syncOfflineQueue(queueLength,setQueueLength);
+            // setSyncStarted(false)
+            Toast.show({
+              type: 'success',
+              text1: 'Sync Complete',
+              text2: 'All offline data synced successfully.',
+              position: 'top',
+            });
+          } catch (err) {
+            Toast.show({
+              type: 'error',
+              text1: 'Sync Failed',
+              text2: 'Some offline data could not be synced.',
+              position: 'top',
+            });
+          } finally {
+            setSyncStatus(false)
+            syncInProgress = false;
+          }
+        }, 5000); // Wait 5 seconds before syncing
+      }
+
+      previousIsConnected = isNowOnline;
+    });
+
+    return () => unsubscribe();
+  }, []);
+
 
   return (
     <>

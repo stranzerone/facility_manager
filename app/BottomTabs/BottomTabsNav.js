@@ -5,7 +5,7 @@ import {
   useColorScheme,
   StatusBar,
   Alert,
-  Appearance,
+  Text,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NavigationContainer, useNavigation } from '@react-navigation/native';
@@ -13,10 +13,17 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { useDispatch, useSelector } from 'react-redux';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
+import { 
+  faHome, 
+  faFileAlt, 
+  faQrcode, 
+  faBell, 
+  faEllipsisH 
+} from '@fortawesome/free-solid-svg-icons';
 
 // Screens & Components
 import Header from './Header';
-import Footer from './Bottom';
 import DynamicPopup from '../DynamivPopUps/DynapicPopUpScreen';
 import useNfcTagHandler from '../../utils/GlobalFunctions/NfcTagHandler';
 import { usePermissions } from '../GlobalVariables/PermissionsContext';
@@ -105,9 +112,84 @@ const MoreStack = () => (
   </Stack.Navigator>
 );
 
+// Custom Tab Bar Component
+const CustomTabBar = ({ state, descriptors, navigation }) => {
+  const { nightMode } = usePermissions();
+  const isDarkMode = nightMode;
+
+  const tabConfig = [
+    { key: 'Home', icon: faHome, label: 'Home' },
+    { key: 'ServiceRequests', icon: faFileAlt, label: 'Complaints' },
+    { key: 'QRCode', icon: faQrcode, label: '', isCenter: true },
+    { key: 'Notifications', icon: faBell, label: 'Notifications' },
+    { key: 'More', icon: faEllipsisH, label: 'More' },
+  ];
+
+  return (
+    <View style={[
+      styles.tabBarContainer,
+      { backgroundColor: isDarkMode ? '#1F2937' : '#FFFFFF' }
+    ]}>
+      {state.routes.map((route, index) => {
+        const { options } = descriptors[route.key];
+        const isFocused = state.index === index;
+        const tabInfo = tabConfig.find(tab => tab.key === route.name);
+
+        const onPress = () => {
+          const event = navigation.emit({
+            type: 'tabPress',
+            target: route.key,
+            canPreventDefault: true,
+          });
+
+          if (!isFocused && !event.defaultPrevented) {
+            navigation.navigate(route.name);
+          }
+        };
+
+        if (tabInfo?.isCenter) {
+          return (
+            <View key={route.key} style={styles.centerTabContainer}>
+              <View
+                style={styles.centerButton}
+                onTouchEnd={onPress}
+              >
+                <View style={styles.centerButtonInner}>
+                  <FontAwesomeIcon icon={tabInfo.icon} size={24} color="white" />
+                </View>
+              </View>
+            </View>
+          );
+        }
+
+        return (
+          <View
+            key={route.key}
+            style={styles.tabButton}
+            onTouchEnd={onPress}
+          >
+            <FontAwesomeIcon
+              icon={tabInfo?.icon}
+              size={20}
+              color={isFocused ? '#1996D3' : isDarkMode ? '#9CA3AF' : '#6B7280'}
+            />
+            {tabInfo?.label ? (
+              <Text style={[
+                styles.tabLabel,
+                { color: isFocused ? '#1996D3' : isDarkMode ? '#9CA3AF' : '#6B7280' }
+              ]}>
+                {tabInfo.label}
+              </Text>
+            ) : null}
+          </View>
+        );
+      })}
+    </View>
+  );
+};
+
 // --- Main Navigation ---
-export default MainNavigation = () => {
-  const [activeTab, setActiveTab] = useState('Home');
+const MainNavigation = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [popupVisible, setPopupVisible] = useState(false);
   const [popupType, setPopupType] = useState('');
@@ -118,7 +200,6 @@ export default MainNavigation = () => {
 
   const systemColorScheme = useColorScheme();
   const dispatch = useDispatch();
-
   const navigation = useNavigation();
 
   const {
@@ -194,8 +275,6 @@ export default MainNavigation = () => {
     const newTheme = !isDarkMode;
     setIsDarkMode(newTheme);
     await AsyncStorage.setItem('userTheme', newTheme ? 'dark' : 'light');
-    // Note: Appearance.setColorScheme is not a setter in React Native,
-    // usually system controlled, you can remove or handle differently
   };
 
   return (
@@ -217,28 +296,48 @@ export default MainNavigation = () => {
       <View style={styles.content}>
         <Tab.Navigator
           initialRouteName="Home"
+          tabBar={(props) => <CustomTabBar {...props} />}
           screenOptions={{
             headerShown: false,
-            tabBarStyle: { display: 'none' }, // hide default tab bar
           }}
-          // Optional: listen to tab change events if needed
-          // onTabPress={({ route }) => setActiveTab(route.name)}
         >
-          <Tab.Screen name="Home" component={HomeStack} />
-          <Tab.Screen name="QRCode" component={QRCodeStack} />
-          <Tab.Screen name="ServiceRequests" component={ServiceRequestStack} />
-          <Tab.Screen name="Notifications" component={NotificationStack} />
-          <Tab.Screen name="More" component={HomeStack} />
+          <Tab.Screen 
+            name="Home" 
+            component={HomeStack}
+            options={{
+              tabBarLabel: 'Home',
+            }}
+          />
+          <Tab.Screen 
+            name="ServiceRequests" 
+            component={ServiceRequestStack}
+            options={{
+              tabBarLabel: 'Complaints',
+            }}
+          />
+          <Tab.Screen 
+            name="QRCode" 
+            component={QRCodeStack}
+            options={{
+              tabBarLabel: '',
+            }}
+          />
+          <Tab.Screen 
+            name="Notifications" 
+            component={NotificationStack}
+            options={{
+              tabBarLabel: 'Notifications',
+            }}
+          />
+          <Tab.Screen 
+            name="More" 
+            component={MoreStack}
+            options={{
+              tabBarLabel: 'More',
+            }}
+          />
         </Tab.Navigator>
       </View>
-
-      <Footer
-        activeTab={activeTab}
-        onTabPress={(tabKey) => {
-          setActiveTab(tabKey);
-          navigation.navigate(tabKey);
-        }}
-      />
 
       <DynamicPopup
         visible={modalVisible}
@@ -266,5 +365,58 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
+  tabBarContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    height: 64,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+    borderTopWidth: 0.5,
+    borderTopColor: '#D1D5DB',
+  },
+  tabButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+    minHeight: 54,
+  },
+  tabLabel: {
+    fontSize: 10,
+    marginTop: 2,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  centerTabContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  centerButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    top: -16,
+  },
+  centerButtonInner: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#1996D3',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
+    elevation: 8,
+  },
 });
 
+export default MainNavigation;

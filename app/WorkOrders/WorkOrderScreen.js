@@ -68,11 +68,14 @@ const WorkOrderPage = ({ route }) => {
             if (wotype === "AS") {
               const bd = await workOrderService.getAssetWorkOrder(qrValue, selectedFilter, true);
               const wo = await workOrderService.getAssetWorkOrder(qrValue, selectedFilter, false);
-              const merged = [...wo, ...bd];
-              setWorkOrders(merged.data || []);
+              console.log(wo,'this are bd')
+              const merged = [...wo.data, ...bd.data];
+              console.log(merged,'this is merged data')
+              setWorkOrders(merged || []);
             } else {
               const bd = await workOrderService.getLocationWorkOrder(qrValue, selectedFilter, true);
               const wo = await workOrderService.getLocationWorkOrder(qrValue, selectedFilter, false);
+              console.log(wo,'this response for wo in woscreen')
               const merged = [...wo.data, ...bd.data];
               setWorkOrders(merged || []);
             }
@@ -85,6 +88,7 @@ const WorkOrderPage = ({ route }) => {
       } else {
         if (screenType === "OW") {
           response = await workOrderService.getAllWorkOrders(selectedFilter, flag);
+          console.log("workorders",response)
           setWorkOrders(response.data || []);
         }
       }
@@ -95,6 +99,7 @@ const WorkOrderPage = ({ route }) => {
       setRefreshing(false);
     }
   };
+  console.log(workOrders,'this are workorders')
 
   useEffect(() => {
     if (type) fetchData();

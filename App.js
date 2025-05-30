@@ -9,12 +9,15 @@ import MainNavigation from './MainNavigation.js';
 import NfcManager from 'react-native-nfc-manager';
 import initializeOneSignal from './utils/GlobalFunctions/PushNotifications.js';
 import DynamicPopup from './app/DynamivPopUps/DynapicPopUpScreen.js';
+import Toast from 'react-native-toast-message'; // ✅ Required
+import NetInfo from '@react-native-community/netinfo';
+import { syncOfflineQueue } from './offline/fileSystem/offlineSync.js';
+
 NfcManager.start();
 
 const App = () => {
   const [nfcEnabled, setNfcEnabled] = useState(null);
   const [showNfcModal, setShowNfcModal] = useState(false);
-
   const [modalVisible, setModalVisible] = useState(false);
   const [modalMessage, setModalMessage] = useState('');
   const [modelType, setModelType] = useState('warning');
@@ -47,12 +50,13 @@ const App = () => {
     setShowNfcModal(false);
   };
 
+
   return (
     <Provider store={store}>
       <PersistGate loading={null} persistor={persistor}>
         <View style={{ flex: 1 }}>
           <MainNavigation />
-          
+
           {/* Tag read result popup */}
           {modalVisible && (
             <DynamicPopup
@@ -93,6 +97,9 @@ const App = () => {
               </View>
             </Modal>
           )}
+
+          {/* ✅ Toast Message Handler */}
+          <Toast />
         </View>
       </PersistGate>
     </Provider>

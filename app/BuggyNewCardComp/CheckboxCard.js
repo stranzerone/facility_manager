@@ -78,8 +78,8 @@ const CheckboxCard = ({ item, onUpdate, editable }) => {
       </View>
 
       {/* Checkbox + Title */}
-      <View className="flex-row items-center mb-2">
-        <Text className="font-bold text-lg mr-2" style={{ color: textColor }}>{item.order}.</Text>
+      <View className="flex-row items-center justify-center mb-2">
+        <Text className="font-bold text-md mr-2" style={{ color: textColor }}>{item.order}.</Text>
         <CircularCheckbox editable={editable} isChecked={isChecked} onPress={handleCheckboxPress} />
         <TouchableOpacity disabled={!editable} onPress={handleTitlePress} className="ml-3 flex-1">
           <Text numberOfLines={4} style={[styles.title, { color: textColor }]}>{item.title}</Text>
@@ -101,7 +101,7 @@ const CircularCheckbox = ({ isChecked, onPress, editable, nightMode }) => {
       onPress={onPress}
       className="flex items-center justify-center"
     >
-      <View className={`w-6 h-6 rounded-full border-2 ${borderColorClass} flex items-center justify-center`}>
+      <View className={`w-5 h-5 rounded-full border-2 ${borderColorClass} flex items-center justify-center`}>
         {isChecked && (
           <View className="w-3.5 h-3.5 rounded-full bg-[#074B7C]" />
         )}

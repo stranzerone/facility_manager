@@ -93,7 +93,7 @@ const FileCard = ({ item, onUpdate, editable }) => {
 
   return (
     <View
-      className="shadow-sm rounded-lg p-3 mx-1 mb-2"
+      className="shadow-sm rounded-lg p-3 mx-2 mb-2"
       style={[styles.inputContainer, { backgroundColor }]}
     >
       {/* Header - More compact */}
@@ -120,7 +120,7 @@ const FileCard = ({ item, onUpdate, editable }) => {
 
       {/* Title - More compact */}
       <View className="flex-row mb-3">
-        <Text className="font-bold text-xl mr-2" style={{ color: textColor }}>
+        <Text className="font-bold text-md mr-2" style={{ color: textColor }}>
           {item.order}.
         </Text>
         <Text style={[styles.title, { color: textColor, flex: 1 }]} numberOfLines={2}>

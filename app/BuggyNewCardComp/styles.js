@@ -13,10 +13,9 @@ const styles = StyleSheet.create({
     
   },
   title: {
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: 'bold',
     color: 'black',
-    marginBottom: 8,
   },
   label: {
     fontSize: 16,

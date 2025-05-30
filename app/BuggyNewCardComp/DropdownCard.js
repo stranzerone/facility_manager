@@ -112,18 +112,7 @@ const DropdownCard = ({ item, onUpdate, editable }) => {
       {/* Remarks */}
       <View className="mt-3">
         <RemarkCard item={item} editable={editable} />
-        <View className="flex-1 px-2 py-2 mt-2 h-6 justify-end">
-          {(selectedValue || item?.data?.optional) && (
-            <>
-              {selectedValue && updatedTime && (
-                <Text className="text-[10px] text-gray-400 font-bold">
-                  Updated at: {updatedTime}
-                </Text>
-              )}
-  
-            </>
-          )}
-        </View>
+       
       </View>
     </View>
   );

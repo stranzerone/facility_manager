@@ -436,7 +436,6 @@ const styles = StyleSheet.create({
     width: '100%',
     backgroundColor:  '#F8F9FA',
     paddingHorizontal: 20,
-    paddingBottom:30
   },
   scrollContainer: {
     paddingBottom: 40,

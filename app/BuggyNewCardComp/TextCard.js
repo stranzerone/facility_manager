@@ -83,7 +83,7 @@ const TextCard = ({ item, onUpdate, editable, type }) => {
 
         {/* Title */}
         <View className="flex-row items-start p-2">
-          <Text className="font-bold text-lg mr-2" style={{ color: textColor }}>{item.order}.</Text>
+          <Text className="font-bold text-md mr-2" style={{ color: textColor }}>{item.order}.</Text>
           <Text style={[styles.title, { color: textColor }]}>{item.title}</Text>
         </View>
 

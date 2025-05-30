@@ -41,7 +41,7 @@ const RemarkCard = ({ item,editable }) => {
   };
 
   return (
-    <View className="ml-4 flex-grow">
+    <View className="ml-1 flex-grow">
       {isEditing ? (
         <TextInput
           style={styles.inputContainer}
@@ -57,7 +57,7 @@ const RemarkCard = ({ item,editable }) => {
         <TouchableOpacity
         disabled={!editable}
         onPress={handleTitleClick}>
-          <Text className="text-sm font-bold text-gray-600 mt-2">
+          <Text className="text-xs font-bold text-gray-600 mt-2">
           <Icon name="pencil" size={16} color="#074B7C" /> 
           {'  '}
            Remark: {remark || "Click to add remark"}
