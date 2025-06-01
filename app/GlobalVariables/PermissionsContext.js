@@ -13,7 +13,9 @@ export const PermissionsProvider = ({ children }) => {
   const [nightMode, setNightMode] = useState();
   const [complaintFilter, setComplaintFilter] = useState("Open");
   const [queueLength,setQueueLength] = useState(0)
+  const [syncTime,setSyncTime]  = useState(0)
   const [syncStatus,setSyncStatus]  = useState(false)
+  const [fetchingOffline,setFetchingOffline]  = useState(false)
   // 🆕 Queue status state
 
 
@@ -29,6 +31,10 @@ export const PermissionsProvider = ({ children }) => {
         nightMode,
         queueLength,
         syncStatus,
+        syncTime,
+        fetchingOffline,
+        setFetchingOffline,
+        setSyncTime,
         setSyncStatus,
         setQueueLength,
         setComplaintFilter,

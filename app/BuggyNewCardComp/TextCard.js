@@ -93,6 +93,7 @@ const TextCard = ({ item, onUpdate, editable, type }) => {
             style={[styles.inputContainer, {
               backgroundColor: inputBG,
               color: inputText,
+              height:35,
               padding: 8,
               borderRadius: 6,
             }]}

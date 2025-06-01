@@ -10,8 +10,6 @@ import NfcManager from 'react-native-nfc-manager';
 import initializeOneSignal from './utils/GlobalFunctions/PushNotifications.js';
 import DynamicPopup from './app/DynamivPopUps/DynapicPopUpScreen.js';
 import Toast from 'react-native-toast-message'; // ✅ Required
-import NetInfo from '@react-native-community/netinfo';
-import { syncOfflineQueue } from './offline/fileSystem/offlineSync.js';
 
 NfcManager.start();
 

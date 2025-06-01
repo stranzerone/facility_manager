@@ -1,30 +1,38 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Image, StyleSheet, useColorScheme } from 'react-native';
+import { View, Text, TouchableOpacity, Image, StyleSheet, Alert, Platform } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { usePermissions } from '../GlobalVariables/PermissionsContext';
 import { workOrderService } from '../../services/apis/workorderApis';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useDispatch } from 'react-redux';
-import { clearAllTeams, fetchAllTeams } from '../../utils/Slices/TeamSlice';
-import { clearAllUsers, fetchAllUsers } from '../../utils/Slices/UsersSlice';
+import { clearAllTeams } from '../../utils/Slices/TeamSlice'; // Assuming fetchAllTeams is not needed on logout
+import { clearAllUsers } from '../../utils/Slices/UsersSlice'; // Assuming fetchAllUsers is not needed on logout
 import { useNavigation } from '@react-navigation/native';
 
 const Header = ({ siteLogo, user }) => {
   const { nightMode, setNightMode } = usePermissions();
   const isDark = nightMode;
   const navigation = useNavigation();
-  console.log(user.name, 'this is user on head');
   const dispatch = useDispatch();
+
+  // Ensure user object and user.name exist to prevent errors
+  const userName = user?.name || "Site"; 
+  // console.log(userName, 'this is user on head'); // Keep for debugging if needed
 
   const handleLogout = async () => {
     try {
-      await workOrderService.appUnrigester();
+      // It's good practice to check if appUnrigester is a function if it might be undefined
+      if (workOrderService && typeof workOrderService.appUnrigester === 'function') {
+        await workOrderService.appUnrigester();
+      } else {
+        console.warn('workOrderService.appUnrigester is not available');
+      }
       await AsyncStorage.removeItem('userInfo');
       await dispatch(clearAllTeams());
       await dispatch(clearAllUsers());
       navigation.replace("Login");
     } catch (error) {
-      console.error('Error clearing local storage', error);
+      console.error('Error during logout:', error); // Log the actual error
       Alert.alert('Error', 'Could not log out. Please try again.');
     }
   };
@@ -36,8 +44,8 @@ const Header = ({ siteLogo, user }) => {
         styles.glassBackground,
         {
           backgroundColor: isDark 
-            ? 'rgba(31, 41, 55, 0.92)' 
-            : 'rgba(255, 255, 255, 0.92)'
+            ? 'rgba(20, 20, 45, 0.96)' // Cosmic Night: Deep, dark desaturated blue/purple
+            : 'rgba(240, 245, 255, 0.96)' // Morning Haze: Very light, cool off-white/pale blue
         }
       ]} />
       
@@ -46,8 +54,8 @@ const Header = ({ siteLogo, user }) => {
         styles.glassOverlay,
         {
           backgroundColor: isDark 
-            ? 'rgba(99, 102, 241, 0.05)' 
-            : 'rgba(59, 130, 246, 0.04)'
+            ? 'rgba(100, 70, 180, 0.1)'  // Cosmic Night: Lighter purple/magenta tint
+            : 'rgba(170, 200, 240, 0.1)' // Morning Haze: Soft sky blue tint
         }
       ]} />
 
@@ -56,8 +64,8 @@ const Header = ({ siteLogo, user }) => {
         styles.accentOverlay,
         {
           backgroundColor: isDark 
-            ? 'rgba(139, 92, 246, 0.03)' 
-            : 'rgba(16, 185, 129, 0.02)'
+            ? 'rgba(0, 180, 200, 0.07)' // Cosmic Night: Contrasting teal/cyan tint
+            : 'rgba(250, 180, 190, 0.07)' // Morning Haze: Hint of warm pink/rose
         }
       ]} />
 
@@ -73,22 +81,21 @@ const Header = ({ siteLogo, user }) => {
                 style={styles.logo}
                 resizeMode="contain"
               />
-              {/* Logo glow effect */}
               <View style={[styles.logoGlow, { 
-                shadowColor: isDark ? '#60A5FA' : '#3B82F6' 
+                shadowColor: isDark ? '#8B5CF6' : '#60A5FA' // Adjusted glow for new bg
               }]} />
             </View>
           ) : (
             <View style={[
               styles.logoPlaceholder, 
               { 
-                backgroundColor: isDark ? '#3B82F6' : '#1996D3',
-                shadowColor: isDark ? '#60A5FA' : '#3B82F6'
+                backgroundColor: isDark ? '#4F46E5' : '#3B82F6', // Indigo / Blue
+                shadowColor: isDark ? '#8B5CF6' : '#60A5FA'  // Adjusted glow
               }
             ]}>
-              <Text style={styles.logoText}>A</Text>
+              <Text style={styles.logoText}>{userName.charAt(0).toUpperCase() || 'A'}</Text>
               <View style={[styles.logoGlow, { 
-                shadowColor: isDark ? '#60A5FA' : '#3B82F6' 
+                shadowColor: isDark ? '#8B5CF6' : '#60A5FA' 
               }]} />
             </View>
           )}
@@ -97,20 +104,21 @@ const Header = ({ siteLogo, user }) => {
             <Text style={[
               styles.appName, 
               { 
-                color: isDark ? '#F9FAFB' : '#1F2937',
+                color: isDark ? '#E0E7FF' : '#111827', // Lighter for dark, darker for light
+                // Text shadow can be subtle or removed if it clashes
                 textShadowColor: isDark 
-                  ? 'rgba(59, 130, 246, 0.3)' 
-                  : 'rgba(255, 255, 255, 0.8)',
+                  ? 'rgba(139, 92, 246, 0.2)' 
+                  : 'rgba(59, 130, 246, 0.1)',
                 textShadowOffset: { width: 0, height: 1 },
-                textShadowRadius: 2
+                textShadowRadius: 1
               }
             ]}>
-              {user.name || "site"}
+              {userName}
             </Text>
             <View style={[
               styles.appNameUnderline,
               {
-                backgroundColor: isDark ? '#60A5FA' : '#3B82F6'
+                backgroundColor: isDark ? '#8B5CF6' : '#60A5FA' // Violet / Blue
               }
             ]} />
           </View>
@@ -118,18 +126,17 @@ const Header = ({ siteLogo, user }) => {
 
         {/* Right side - Theme toggle and logout */}
         <View style={styles.rightSection}>
-          {/* Night mode toggle */}
           <TouchableOpacity 
             style={[
               styles.toggleButton, 
               { 
                 backgroundColor: isDark 
-                  ? 'rgba(75, 85, 99, 0.6)' 
-                  : 'rgba(243, 244, 246, 0.8)',
+                  ? 'rgba(55, 65, 81, 0.7)'  // Darker gray for dark mode button
+                  : 'rgba(229, 231, 235, 0.9)', // Lighter gray for light mode button
                 borderColor: isDark 
-                  ? 'rgba(156, 163, 175, 0.2)' 
-                  : 'rgba(209, 213, 219, 0.3)',
-                shadowColor: isDark ? '#60A5FA' : '#3B82F6'
+                  ? 'rgba(107, 114, 128, 0.3)' 
+                  : 'rgba(156, 163, 175, 0.4)',
+                shadowColor: isDark ? '#A78BFA' : '#3B82F6' // Violet / Blue glow
               }
             ]}
             onPress={() => setNightMode(!nightMode)}
@@ -137,27 +144,26 @@ const Header = ({ siteLogo, user }) => {
             <Icon 
               name={isDark ? "sun-o" : "moon-o"} 
               size={16} 
-              color={isDark ? '#FBBF24' : '#6366F1'} 
+              color={isDark ? '#FCD34D' : '#4F46E5'} // Amber / Indigo
             />
             <View style={[
               styles.buttonGlow,
-              { backgroundColor: isDark ? '#FBBF24' : '#6366F1' }
+              { backgroundColor: isDark ? '#FCD34D' : '#4F46E5' }
             ]} />
           </TouchableOpacity>
 
-          {/* Logout button */}
           <TouchableOpacity 
             onPress={handleLogout} 
             style={[
               styles.logoutButton,
               {
-                backgroundColor: '#EF4444',
-                shadowColor: '#EF4444'
+                backgroundColor: isDark ? '#F87171' : '#EF4444', // Slightly lighter red for dark
+                shadowColor: isDark ? '#F87171' : '#EF4444'
               }
             ]}
           >
             <Icon name="power-off" size={16} color="white" />
-            <View style={[styles.buttonGlow, { backgroundColor: '#EF4444' }]} />
+            <View style={[styles.buttonGlow, { backgroundColor: isDark ? '#F87171' : '#EF4444' }]} />
           </TouchableOpacity>
         </View>
       </View>
@@ -168,53 +174,38 @@ const Header = ({ siteLogo, user }) => {
 const styles = StyleSheet.create({
   headerWrapper: {
     position: 'relative',
-    height: 64,
+    height: Platform.OS === 'ios' ? 88 : 64, // Adjusted height for iOS status bar area
+    paddingTop: Platform.OS === 'ios' ? 24 : 0, // Padding for iOS status bar
   },
-  gradientBackground: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 1,
-  },
+  // gradientBackground: { // This style is defined but not used in the JSX
+  //   position: 'absolute',
+  //   top: 0, left: 0, right: 0, bottom: 0,
+  //   zIndex: 1,
+  // },
   glassBackground: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    top: 0, left: 0, right: 0, bottom: 0,
     zIndex: 1,
-    backdropFilter: 'blur(20px)',
+    // backdropFilter: 'blur(20px)', // backdropFilter is not standard in React Native
   },
   glassOverlay: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    top: 0, left: 0, right: 0, bottom: 0,
     zIndex: 2,
-    backdropFilter: 'blur(10px)',
+    // backdropFilter: 'blur(10px)', // backdropFilter is not standard in React Native
   },
-  patternOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 3,
-    opacity: 0.4,
-    backgroundImage: 'radial-gradient(circle at 25% 25%, currentColor 1px, transparent 1px)',
-    backgroundSize: '20px 20px',
-  },
+  // patternOverlay: { // This style is defined but not used in the JSX
+  //   position: 'absolute',
+  //   top: 0, left: 0, right: 0, bottom: 0,
+  //   zIndex: 3, opacity: 0.4,
+  //   backgroundImage: 'radial-gradient(circle at 25% 25%, currentColor 1px, transparent 1px)',
+  //   backgroundSize: '20px 20px',
+  // },
   accentOverlay: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    top: 0, left: 0, right: 0, bottom: 0,
     zIndex: 3,
-    opacity: 0.6,
+    // opacity: 0.6, // Opacity is handled by RGBA alpha
   },
   headerContainer: {
     position: 'relative',
@@ -225,118 +216,117 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     height: '100%',
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(156, 163, 175, 0.1)',
+    borderBottomColor: 'rgba(156, 163, 175, 0.15)', // Slightly more visible border
   },
   leftSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
+    flex: 1, // Allow left section to take available space
+    marginRight: 8, // Add some space before right section icons
   },
   logoContainer: {
     position: 'relative',
   },
   logo: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    width: 38, // Slightly smaller
+    height: 38,
+    borderRadius: 8, // Softer corners
+    borderWidth: 1.5, // Thinner border
+    borderColor: 'rgba(255, 255, 255, 0.25)',
   },
   logoPlaceholder: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
+    width: 38,
+    height: 38,
+    borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.35)',
+    shadowOffset: { width: 0, height: 2 }, // Softer shadow
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 5,
   },
   logoGlow: {
     position: 'absolute',
-    top: -2,
-    left: -2,
-    right: -2,
-    bottom: -2,
-    borderRadius: 12,
-    opacity: 0.3,
+    top: -2, left: -2, right: -2, bottom: -2, // Ensure glow covers the border
+    borderRadius: 10, // Slightly larger than logo's borderRadius
+    opacity: 0.4, // Adjusted opacity
+    // shadowColor is set inline
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 1,
-    shadowRadius: 10,
-    elevation: 5,
+    shadowOpacity: 0.8, // Stronger glow effect
+    shadowRadius: 8,
+    // elevation: 5, // Elevation on parent is enough
     zIndex: -1,
   },
   logoText: {
     color: 'white',
     fontSize: 18,
     fontWeight: 'bold',
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowColor: 'rgba(0, 0, 0, 0.2)',
     textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+    textShadowRadius: 1,
   },
   appNameContainer: {
-    marginLeft: 16,
+    marginLeft: 12, // Slightly less margin
     position: 'relative',
+    flexShrink: 1, // Allow app name to shrink if space is limited
   },
   appName: {
-    fontSize: 20,
-    fontWeight: '700',
-    letterSpacing: 0.5,
+    fontSize: 18, // Slightly smaller for better fit
+    fontWeight: '600', // Semibold
+    letterSpacing: 0.25,
+    // color and textShadow are set inline
   },
   appNameUnderline: {
     position: 'absolute',
-    bottom: -2,
+    bottom: -3, // Adjusted position
     left: 0,
     height: 2,
-    width: '60%',
+    width: '50%', // Shorter underline
     borderRadius: 1,
-    opacity: 0.6,
+    opacity: 0.7, // More visible
+    // backgroundColor is set inline
   },
   rightSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    gap: 12, // Slightly reduced gap
   },
   toggleButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 38, // Consistent size with logo
+    height: 38,
+    borderRadius: 19, // Fully rounded
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
     position: 'relative',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+    // backgroundColor, borderColor, shadowColor set inline
+    shadowOffset: { width: 0, height: 1 }, // Softer shadow
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
     elevation: 3,
   },
   logoutButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     position: 'relative',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 6,
+    // backgroundColor, shadowColor set inline
+    shadowOffset: { width: 0, height: 2 }, // Softer shadow
+    shadowOpacity: 0.25,
+    shadowRadius: 5,
+    elevation: 5,
     justifyContent: 'center',
     alignItems: 'center',
   },
   buttonGlow: {
     position: 'absolute',
-    top: -1,
-    left: -1,
-    right: -1,
-    bottom: -1,
-    borderRadius: 21,
-    opacity: 0.2,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 1,
-    shadowRadius: 8,
-    elevation: 2,
+    top: -1, left: -1, right: -1, bottom: -1,
+    borderRadius: 20, // Match button's roundedness
+    opacity: 0.25, // Adjusted glow opacity
+    // backgroundColor is set inline
+    // shadow properties are not typically needed for an inner glow effect like this
     zIndex: -1,
   },
 });

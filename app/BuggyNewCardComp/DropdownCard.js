@@ -87,7 +87,7 @@ const DropdownCard = ({ item, onUpdate, editable }) => {
 
       {/* Dropdown */}
       <TouchableOpacity
-        className="flex flex-row items-center justify-between px-3 py-2 rounded border border-gray-300"
+        className="flex flex-row items-center justify-between px-3 mx-6 py-2 rounded border border-gray-300"
         disabled={!editable}
         onPress={() => setModalVisible(true)}
         style={{ backgroundColor: nightMode ? "#2C2C2E" : "#F9FAFB" }}

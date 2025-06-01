@@ -4,7 +4,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faHome, faFileAlt, faQrcode, faBell, faEllipsisH } from '@fortawesome/free-solid-svg-icons';
 import { usePermissions } from '../GlobalVariables/PermissionsContext';
 
-const Footer = ({ activeTab, onTabPress }) => {
+const Footer = ({ activeTab, onTabPress, isOffline = false }) => {
   const { nightMode } = usePermissions();
   const isDarkMode = nightMode;
 
@@ -25,7 +25,10 @@ const Footer = ({ activeTab, onTabPress }) => {
           activeOpacity={0.8}
         >
           <View style={styles.centerButtonInner}>
-            <FontAwesomeIcon icon={tab.icon} size={24} color="white" />
+            {/* White circular background */}
+            <View style={styles.whiteCircle}>
+              <FontAwesomeIcon icon={tab.icon} size={24} color="#1996D3" />
+            </View>
           </View>
         </TouchableOpacity>
       );
@@ -55,18 +58,27 @@ const Footer = ({ activeTab, onTabPress }) => {
   };
 
   return (
-    <View style={[
-      styles.footerContainer,
-      { backgroundColor: isDarkMode ? '#1F2937' : '#FFFFFF' }
-    ]}>
-      {tabs.map(tab => (
-        <TabButton
-          key={tab.key}
-          tab={tab}
-          isActive={activeTab === tab.key}
-          onPress={onTabPress}
-        />
-      ))}
+    <View>
+      <View style={[
+        styles.footerContainer,
+        { backgroundColor: isDarkMode ? '#1F2937' : '#FFFFFF' }
+      ]}>
+        {tabs.map(tab => (
+          <TabButton
+            key={tab.key}
+            tab={tab}
+            isActive={activeTab === tab.key}
+            onPress={onTabPress}
+          />
+        ))}
+      </View>
+      
+      {/* Offline indicator */}
+      {isOffline && (
+        <View style={styles.offlineIndicator}>
+          <Text style={styles.offlineText}>App is offline</Text>
+        </View>
+      )}
     </View>
   );
 };
@@ -119,6 +131,27 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 4.65,
     elevation: 8,
+  },
+  whiteCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  offlineIndicator: {
+    backgroundColor: '#DC2626',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 24,
+  },
+  offlineText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '500',
   },
 });
 

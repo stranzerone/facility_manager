@@ -13,8 +13,8 @@ import {
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { usePermissions } from "../GlobalVariables/PermissionsContext";
-import { getQueueLength } from "../../offline/fileSystem/fileOperations";
-import { syncOfflineQueue } from "../../offline/fileSystem/offlineSync";
+import { getQueueLength, readFromFile } from "../../offline/fileSystem/fileOperations";
+import { getOfflineData, syncOfflineQueue } from "../../offline/fileSystem/offlineSync";
 
 const TechnicianDashboard = () => {
   const navigation = useNavigation();
@@ -22,16 +22,26 @@ const TechnicianDashboard = () => {
   const isTablet = width >= 768;
   const [animatedCards, setAnimatedCards] = useState({});
   const [refreshing, setRefreshing] = useState(false);
-  const { queueLength, syncStatus } = usePermissions();
+  const [complaintsLenght,setComplaintsLength]  = useState(0)
+  // Get all required values from global context
+  const { 
+    queueLength, 
+    syncStatus, 
+    syncTime, 
+    nightMode, 
+    fetchingOffline, 
+    setFetchingOffline 
+  } = usePermissions();
+  
   const [queueLenghtFile, setQueueLengthFile] = useState(0);
+  const [openWoLength, setOpenWoLength] = useState(0);
   
   // Animation refs for sync status
   const cloudAnimation = useRef(new Animated.Value(0)).current;
   const pulseAnimation = useRef(new Animated.Value(1)).current;
   const rotateAnimation = useRef(new Animated.Value(0)).current;
+  const tickAnimation = useRef(new Animated.Value(0)).current;
   
-  const systemColorScheme = useColorScheme();
-  const { nightMode } = usePermissions();
   const isDarkMode = nightMode;
 
   // Color schemes
@@ -59,13 +69,6 @@ const TechnicianDashboard = () => {
 
   // Current theme based on mode
   const theme = isDarkMode ? darkTheme : lightTheme;
-
-  // Sync data (replacing work order data)
-  const syncData = {
-    syncedItems: 12,
-    queuedItems: 3,
-    lastSynced: "10:45 AM"
-  };
 
   // Sync animations
   useEffect(() => {
@@ -123,8 +126,29 @@ const TechnicianDashboard = () => {
       cloudAnimation.setValue(0);
       pulseAnimation.setValue(1);
       rotateAnimation.setValue(0);
+      
+      // Animate tick mark when ready and queue is 0
+      if (queueLenghtFile === 0) {
+        Animated.sequence([
+          Animated.timing(tickAnimation, {
+            toValue: 1,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+          Animated.timing(tickAnimation, {
+            toValue: 0.9,
+            duration: 200,
+            useNativeDriver: true,
+          }),
+          Animated.timing(tickAnimation, {
+            toValue: 1,
+            duration: 200,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      }
     }
-  }, [syncStatus]);
+  }, [syncStatus, queueLenghtFile]);
 
   // Interpolated values for animations
   const cloudTranslateY = cloudAnimation.interpolate({
@@ -147,7 +171,7 @@ const TechnicianDashboard = () => {
     {
       id: "OW",
       name: "Open Work Orders",
-      count: 5,
+      count: openWoLength,
       icon: "file-text",
       color: theme.primaryColor,
       iconBgColor: "#FFFFFF",
@@ -167,7 +191,7 @@ const TechnicianDashboard = () => {
     {
       id: "OC",
       name: "Open Complaints",
-      count: 4,
+      count: complaintsLenght,
       icon: "message-square",
       color: "#FFFFFF",
       iconBgColor: "#FF8A85",
@@ -194,28 +218,99 @@ const TechnicianDashboard = () => {
     setAnimatedCards(prev => ({ ...prev, [key]: false }));
   };
 
-  const handleRefresh = async() => {
+  const handleRefresh = async () => {
     setRefreshing(true);
-    await syncOfflineQueue();
-    // Simulate refresh - in production, replace with actual sync logic
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1500);
+    try {
+      await syncOfflineQueue();
+    } catch (error) {
+      console.log('Error during refresh:', error);
+    } finally {
+      // Simulate refresh - in production, replace with actual sync logic
+      setTimeout(() => {
+        setRefreshing(false);
+      }, 1500);
+    }
   };
 
   console.log(queueLength, 'this is queuelength at init');
+  console.log(fetchingOffline, 'fetchingOffline status from global state');
 
-useFocusEffect(
-  useCallback(() => {
-    const updateQueue = async () => {
-      console.log("called to check length");
-      const length = await getQueueLength('queueData');
-      setQueueLengthFile(length);
-    };
+  useFocusEffect(
+    useCallback(() => {
+      let intervalId = null;
 
-    updateQueue();
-  }, [syncStatus])
-);;
+      const pollQueueLength = async () => {
+        try {
+          const length = await getQueueLength('queueData');
+          setQueueLengthFile(length);
+        } catch (error) {
+          console.log('Error getting queue length:', error);
+        }
+      };
+
+const getOpenWoLength = async () => {
+  try {
+    const response = await readFromFile('ch_workorders');
+    const com_response = await readFromFile('ch_complaints');
+    console.log(com_response, 'this com response');
+
+    const now = new Date();
+
+    // Filter work orders by due date
+    const filteredWorkorders = Object.values(response).filter(wo => {
+      const dueDate = new Date(wo["Due Date"]);
+      return dueDate <= now;
+    });
+
+    // Filter complaints with status === "open"
+    const openComplaints = Object.values(com_response.data).filter(
+      c => c.status?.toLowerCase() === 'open'
+    );
+
+    console.log("Filtered work orders length:", filteredWorkorders.length);
+    console.log("Open complaints length:", openComplaints.length);
+
+    setComplaintsLength(openComplaints.length);
+    setOpenWoLength(filteredWorkorders.length);
+  } catch (error) {
+    console.log('Error getting open work orders length:', error);
+  }
+};
+
+
+      // Always run once on focus
+      getOpenWoLength();
+      pollQueueLength();
+
+      // Only start polling every 2s if syncStatus is true
+      if (syncStatus && queueLenghtFile > 0) {
+        intervalId = setInterval(pollQueueLength, 2000);
+      }
+
+      // Clean up on unfocus
+      return () => {
+        if (intervalId) clearInterval(intervalId);
+      };
+    }, [syncStatus, queueLenghtFile])
+  );
+
+  const refreshOfflineData = async () => {
+    try {
+      // Set global loading state to true before starting
+      setFetchingOffline(true);
+      
+      // Call the offline data fetch function
+      await getOfflineData(setFetchingOffline);
+      
+      // Note: setFetchingOffline(false) should be called inside getOfflineData
+      // when the operation completes, but we'll add a safety net here
+      
+    } catch (error) {
+      console.log(error, 'error in refreshOfflineData');
+      // Ensure we reset the loading state even if there's an error
+      setFetchingOffline(false);
+    }
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.backgroundColor }}>
@@ -243,7 +338,7 @@ useFocusEffect(
               <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "600", marginRight: 8 }}>
                 Offline Sync
               </Text>
-              {syncStatus && (
+              {syncStatus && queueLenghtFile > 0 && (
                 <View style={{ flexDirection: "row", alignItems: "center" }}>
                   {/* Animated syncing indicator dots */}
                   <Animated.View style={{
@@ -288,19 +383,20 @@ useFocusEffect(
               )}
             </View>
             <Pressable 
-              onPress={handleRefresh}
+              onPress={refreshOfflineData}
+              disabled={fetchingOffline} // Disable button while fetching
               style={({ pressed }) => ({ 
-                opacity: pressed ? 0.7 : 1,
+                opacity: (pressed || fetchingOffline) ? 0.7 : 1,
                 backgroundColor: "rgba(255, 255, 255, 0.2)",
                 padding: 6,
                 borderRadius: 20,
               })}
             >
               <Animated.View style={{
-                transform: [{ rotate: refreshing ? rotateInterpolate : '0deg' }]
+                transform: [{ rotate: (refreshing || fetchingOffline) ? rotateInterpolate : '0deg' }]
               }}>
                 <Feather 
-                  name={refreshing ? "loader" : "refresh-cw"} 
+                  name={(refreshing || fetchingOffline) ? "loader" : "refresh-cw"} 
                   size={16} 
                   color="#FFFFFF" 
                 />
@@ -321,23 +417,23 @@ useFocusEffect(
                 marginRight: 14,
                 borderWidth: 4,
                 borderColor: "rgba(255, 255, 255, 0.5)",
-                transform: [{ scale: syncStatus ? pulseAnimation : 1 }],
+                transform: [{ scale: (syncStatus || fetchingOffline) ? pulseAnimation : 1 }],
               }}>
                 <Animated.View style={{
                   transform: [
-                    { translateY: syncStatus ? cloudTranslateY : 0 },
+                    { translateY: (syncStatus || fetchingOffline) ? cloudTranslateY : 0 },
                   ],
-                  opacity: syncStatus ? cloudOpacity : 1,
+                  opacity: (syncStatus || fetchingOffline) ? cloudOpacity : 1,
                 }}>
                   <Feather 
-                    name={syncStatus ? "upload-cloud" : "cloud"} 
+                    name={(syncStatus || fetchingOffline) ? "upload-cloud" : "cloud"} 
                     size={22} 
                     color="#FFFFFF" 
                   />
                 </Animated.View>
                 
                 {/* Additional animated elements for active sync */}
-                {syncStatus && (
+                {(syncStatus || fetchingOffline) && (
                   <>
                     <Animated.View style={{
                       position: 'absolute',
@@ -375,20 +471,41 @@ useFocusEffect(
               
               <View>
                 <Text style={{ color: "#FFFFFF", fontSize: 14 }}>
-                  {syncData.syncedItems} <Text style={{ fontSize: 12, opacity: 0.8 }}>items synced</Text>
+                  {queueLenghtFile} items remaining
                 </Text>
                 <Text style={{ color: "#FFFFFF", fontSize: 12, opacity: 0.7, marginTop: 2 }}>
-                  {syncStatus ? "Syncing..." : `Last: ${syncData.lastSynced}`}
+                  {(syncStatus || fetchingOffline) ? 
+                    (queueLenghtFile === 0 ? "Preparing..." : fetchingOffline ? "Fetching..." : "Syncing...") : 
+                    `Last: ${syncTime}`
+                  }
                 </Text>
               </View>
             </View>
             
             <View style={{ alignItems: "center" }}>
-              <Text style={{ color: "#FFFFFF", fontSize: 24, fontWeight: "bold" }}>
-                {queueLenghtFile}
-              </Text>
+              {!fetchingOffline && queueLenghtFile === 0 ? (
+                <Animated.View style={{
+                  transform: [{ scale: tickAnimation }]
+                }}>
+                  <Feather 
+                    name="check-circle" 
+                    size={24} 
+                    color="#FFFFFF" 
+                  />
+                </Animated.View>
+              ) : (
+                <Animated.View style={{
+                  transform: [{ rotate: fetchingOffline ? rotateInterpolate : '0deg' }]
+                }}>
+                  <Feather 
+                    name={fetchingOffline ? "loader" : "clock"} 
+                    size={24} 
+                    color="#FFFFFF" 
+                  />
+                </Animated.View>
+              )}
               <Text style={{ color: "#FFFFFF", fontSize: 12, opacity: 0.8 }}>
-                Queue
+                {fetchingOffline ? "Fetching..." : (queueLenghtFile === 0 ? "Ready" : "Loading ...")}
               </Text>
             </View>
           </View>

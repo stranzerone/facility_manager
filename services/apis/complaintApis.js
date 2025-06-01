@@ -10,7 +10,6 @@ export const complaintService = {
   const params = {
     "user-id":user.data.id,
     "api-token":user.data.api_token
-      
     };
     const url = complaintService.appendParamsInUrl(`${API_URL2}/staff/mycomplaints`, params);
     const headers = await Util.getCommonAuth()

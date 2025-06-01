@@ -44,7 +44,7 @@ const RemarkCard = ({ item,editable }) => {
     <View className="ml-1 flex-grow">
       {isEditing ? (
         <TextInput
-          style={styles.inputContainer}
+          style={[styles.inputContainer,{height:35}]}
           value={remark}
           onChangeText={handleRemarkChange}
           placeholder="Enter remark upto 250 char"

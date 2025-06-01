@@ -7,18 +7,14 @@ export const writeToFile = async (fileName, data) => {
     await FileSystem.writeAsStringAsync(fileUri, stringifiedData, {
       encoding: FileSystem.EncodingType.UTF8,
     });
-
-    console.log(`✅ Data written to ${fileUri}`);
   } catch (error) {
     console.error('❌ Error writing to file:', error);
   }
 };
 
 
-
 export const readFromFile = async (fileName) => {
   try {
-    console.log(fileName,'this file is requested')
     const fileUri = FileSystem.documentDirectory + fileName;
 
     const fileInfo = await FileSystem.getInfoAsync(fileUri);
@@ -26,12 +22,12 @@ export const readFromFile = async (fileName) => {
       console.warn(`⚠️ File not found: ${fileUri}`);
       return null;
     }
-console.log(fileInfo,'this is fileinfo')
+
     const content = await FileSystem.readAsStringAsync(fileUri, {
       encoding: FileSystem.EncodingType.UTF8,
-    });
-    console.log(content,'this is conetent for file trued to load')
-    return content;
+    });    
+    // ✅ Parse string back to original object/array
+    return JSON.parse(content);
   } catch (error) {
     console.error('❌ Error reading file:', error);
     return null;
@@ -95,7 +91,7 @@ export const getQueueLength = async (name) => {
   const QUEUE_FILE_PATH = `${FileSystem.documentDirectory}${name}.json`;
 
   try {
-    const existing = await FileSystem.readAsStringAsync(QUEUE_FILE_PATH).catch(() => '[]');
+    const existing = await FileSystem.readAsStringAsync(QUEUE_FILE_PATH);
     const queue = JSON.parse(existing);
     return queue.length;
   } catch (error) {

@@ -24,7 +24,7 @@ const Stack = createNativeStackNavigator();
 const MainNavigator = () => {
   const { nightMode } = usePermissions();
   const [modalVisible] = useState(true);
-const{syncStatus,setSyncStatus,queueLength,setQueueLength}  = usePermissions()
+const{syncStatus,setSyncStatus,queueLength,setQueueLength,setSyncTime}  = usePermissions()
 
   const MyDarkTheme = {
     ...DarkTheme,
@@ -54,10 +54,12 @@ const{syncStatus,setSyncStatus,queueLength,setQueueLength}  = usePermissions()
       if (isNowOnline && !previousIsConnected && !syncInProgress) {
         syncInProgress = true;
         setSyncStatus(true)
+ const now = new Date();
+const formattedTime = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+setSyncTime(formattedTime);
         //  setSyncStarted(true)
         setTimeout(async () => {
           try {
-            console.log(queueLength,"this are on callling sync in")
             setSyncStatus(true)
             await syncOfflineQueue(queueLength,setQueueLength);
             // setSyncStarted(false)
@@ -75,9 +77,12 @@ const{syncStatus,setSyncStatus,queueLength,setQueueLength}  = usePermissions()
               position: 'top',
             });
           } finally {
-            setSyncStatus(false)
-            syncInProgress = false;
-          }
+  syncInProgress = false;
+  setTimeout(() => {
+    setSyncStatus(false);
+  }, 12000);
+}
+
         }, 5000); // Wait 5 seconds before syncing
       }
 

@@ -38,6 +38,7 @@ const ComplaintsScreen = () => {
     try {
       setLoading(true);
       const response = await complaintService.getAllComplaints();
+      console.log(response,'this is response for complaints')
       setComplaints(response.data || []);
     } catch {
       setComplaints([]);
@@ -68,7 +69,7 @@ const ComplaintsScreen = () => {
 
   const filteredComplaintsMemoized = useMemo(() => {
     if (complaintFilter === 'All') return complaints;
-    return complaints.filter((c) => c.status === complaintFilter);
+    return complaints?.filter((c) => c.status === complaintFilter);
   }, [complaints, complaintFilter]);
 
   const onRefresh = () => {

@@ -20,7 +20,8 @@ import { workOrderService } from "../../services/apis/workorderApis";
 
 // Colors based on nightMode
 const getColors = (nightMode) => ({
-  background: nightMode ? '#121212' : '#f8f9fa',
+  header: nightMode ? '#2D3748' : '#074B7C',
+  background: nightMode ? '#121212' : '#eceff1',
   card: nightMode ? '#1e1e1e' : '#ffffff',
   text: nightMode ? 'gray' : '#074B7C',
   icon: nightMode ? '#f8f9fa' : '#074B7C',
@@ -131,7 +132,7 @@ const WorkOrderPage = ({ route }) => {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View className="flex flex-row items-center justify-between p-3 mt-1 rounded-md shadow-md"
-        style={{ backgroundColor: colors.text }}>
+        style={{ backgroundColor: colors.header }}>
         {/* Left: Flag & Filter */}
         <View className="flex flex-row items-center space-x-3">
           <TouchableOpacity

@@ -1,39 +1,54 @@
 import NetInfo from "@react-native-community/netinfo";
 import complaints from "./mockComplaintData.json";
-import { addToQueue } from "../../offline/fileSystem/fileOperations";
-import ch_maps from "./ch_maps.json";
-import ch_workorders from "./ch_workorders.json";
-import ch_instructions from "./ch_instructions.json";
-
+import { addToQueue, readFromFile } from "../../offline/fileSystem/fileOperations";
+import Toast from "react-native-toast-message";
 // Utility: map workorder UUIDs to { as: {}, st: {}, wo }
-const mapWorkorders = (ids = []) => {
-  return ids
-    .map(id => {
-      const wo = ch_workorders[id];
-      return wo ? { as: {}, st: {}, wo } : null;
-    })
-    .filter(Boolean);
-};
+
 
 // Utility: map all workorders
-const mapAllWorkorders = () => {
-  return Object.values(ch_workorders).map(wo => ({
-    as: {},
-    st: {},
-    wo,
-  }));
-};
+
 
 export const Interceptor = {
   request: async (url, method, data, headers, params) => {
     const netState = await NetInfo.fetch();
     const isOffline = !netState.isConnected;
+    const ch_maps = await readFromFile('ch_maps');
+    const ch_workorders = await readFromFile('ch_workorders');
+    const ch_instructions = await readFromFile('ch_instructions');
+
+
+const mapAllWorkorders = () => {
+  const now = new Date();
+  return Object.values(ch_workorders)
+    .filter(wo => {
+      const dueDate = new Date(wo["Due Date"]);
+      return dueDate <= now; // only include workorders with due date <= now
+    })
+    .map(wo => ({
+      as: {},
+      st: {},
+      wo: wo,
+    }));
+};
+
+const excludedOfflineRoutes = [
+  '/v3/workorder', // example
+  '/v3/breakdown',
+];
+
+    const mapWorkorders = (ids = []) => {
+      return ids
+        .map(id => {
+          const wo = ch_workorders[id];
+          return wo ? { as: {}, st: {}, wo } : null;
+        })
+        .filter(Boolean);
+    };
 
     if (!isOffline) {
+      console.log(url,headers,'this is url')
       return { url, method, data, headers };
     }
-    console.log("inside offline call")
-
     // Handle GET
     if (method === "GET") {
       const responseTemplate = {
@@ -44,8 +59,10 @@ export const Interceptor = {
       };
 
       switch (true) {
+
+
         case url.includes('/v3/workorder/filter'):
-          return { ...responseTemplate, data: mapAllWorkorders() };
+          return { ...responseTemplate, data: mapAllWorkorders().slice(0,20) };
 
         case url.includes('/v3/workorder/assigned/asset?'):
           const assetIDs = ch_maps.asset_wo_map[params?.asset_uuid] || [];
@@ -56,13 +73,16 @@ export const Interceptor = {
           return { ...responseTemplate, data: mapWorkorders(locationIDs) };
 
         case url.includes('/v3/insts'):
+          console.log(params.ref_uuid,'this are params')
+          console.log(ch_instructions["e23f11ea-0205-471b-b1bf-cd5492b6abdf"],'this are inst')
           return {
             ...responseTemplate,
-            data: ch_instructions[params?.ref_uuid]?.instructions || [],
+            data: ch_instructions[params.ref_uuid] || [],
           };
 
         case url.includes('/staff/mycomplaints'):
-          return { ...responseTemplate, data: complaints };
+          const data = await readFromFile('complaints')
+          return { ...responseTemplate, data: data || [] };
 
         default:
           break;
@@ -76,7 +96,26 @@ export const Interceptor = {
       };
     }
 
-    else if(method !== "GET") {
+ else if (method !== "GET") {
+const isExcluded = excludedOfflineRoutes.some(route => url.includes(route));
+
+if (isExcluded) {
+  console.log('i am excluded')
+  Toast.show({
+    type: 'error',
+    text1: 'OOPS! You are Offline',
+    text2: 'Please connect to the internet to perform this action.',
+    position: 'top',
+  });
+
+  return {
+    status: 'error',
+    fromCache: true,
+    message: 'Offline action not allowed for this route',
+  };
+}
+
+
       try {
         await addToQueue("queueData", {
           url,

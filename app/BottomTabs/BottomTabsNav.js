@@ -21,6 +21,7 @@ import {
   faBell, 
   faEllipsisH 
 } from '@fortawesome/free-solid-svg-icons';
+import NetInfo from '@react-native-community/netinfo';
 
 // Screens & Components
 import Header from './Header';
@@ -113,7 +114,7 @@ const MoreStack = () => (
 );
 
 // Custom Tab Bar Component
-const CustomTabBar = ({ state, descriptors, navigation }) => {
+const CustomTabBar = ({ state, descriptors, navigation, showOfflineIndicator, isOnlineMessage }) => {
   const { nightMode } = usePermissions();
   const isDarkMode = nightMode;
 
@@ -126,64 +127,78 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
   ];
 
   return (
-    <View style={[
-      styles.tabBarContainer,
-      { backgroundColor: isDarkMode ? '#1F2937' : '#FFFFFF' }
-    ]}>
-      {state.routes.map((route, index) => {
-        const { options } = descriptors[route.key];
-        const isFocused = state.index === index;
-        const tabInfo = tabConfig.find(tab => tab.key === route.name);
+    <View>
+      <View style={[
+        styles.tabBarContainer,
+        { backgroundColor: isDarkMode ? '#1F2937' : '#FFFFFF' }
+      ]}>
+        {state.routes.map((route, index) => {
+          const { options } = descriptors[route.key];
+          const isFocused = state.index === index;
+          const tabInfo = tabConfig.find(tab => tab.key === route.name);
 
-        const onPress = () => {
-          const event = navigation.emit({
-            type: 'tabPress',
-            target: route.key,
-            canPreventDefault: true,
-          });
+          const onPress = () => {
+            const event = navigation.emit({
+              type: 'tabPress',
+              target: route.key,
+              canPreventDefault: true,
+            });
 
-          if (!isFocused && !event.defaultPrevented) {
-            navigation.navigate(route.name);
-          }
-        };
+            if (!isFocused && !event.defaultPrevented) {
+              navigation.navigate(route.name);
+            }
+          };
 
-        if (tabInfo?.isCenter) {
-          return (
-            <View key={route.key} style={styles.centerTabContainer}>
-              <View
-                style={styles.centerButton}
-                onTouchEnd={onPress}
-              >
-                <View style={styles.centerButtonInner}>
-                  <FontAwesomeIcon icon={tabInfo.icon} size={24} color="white" />
+          if (tabInfo?.isCenter) {
+            return (
+              <View key={route.key} style={styles.centerTabContainer}>
+                <View
+                  style={styles.centerButton}
+                  onTouchEnd={onPress}
+                >
+                  <View style={styles.centerButtonInner}>
+                    <FontAwesomeIcon icon={tabInfo.icon} size={24} color="white" />
+                  </View>
                 </View>
               </View>
+            );
+          }
+
+          return (
+            <View
+              key={route.key}
+              style={styles.tabButton}
+              onTouchEnd={onPress}
+            >
+              <FontAwesomeIcon
+                icon={tabInfo?.icon}
+                size={20}
+                color={isFocused ? '#1996D3' : isDarkMode ? '#9CA3AF' : '#6B7280'}
+              />
+              {tabInfo?.label ? (
+                <Text style={[
+                  styles.tabLabel,
+                  { color: isFocused ? '#1996D3' : isDarkMode ? '#9CA3AF' : '#6B7280' }
+                ]}>
+                  {tabInfo.label}
+                </Text>
+              ) : null}
             </View>
           );
-        }
-
-        return (
-          <View
-            key={route.key}
-            style={styles.tabButton}
-            onTouchEnd={onPress}
-          >
-            <FontAwesomeIcon
-              icon={tabInfo?.icon}
-              size={20}
-              color={isFocused ? '#1996D3' : isDarkMode ? '#9CA3AF' : '#6B7280'}
-            />
-            {tabInfo?.label ? (
-              <Text style={[
-                styles.tabLabel,
-                { color: isFocused ? '#1996D3' : isDarkMode ? '#9CA3AF' : '#6B7280' }
-              ]}>
-                {tabInfo.label}
-              </Text>
-            ) : null}
-          </View>
-        );
-      })}
+        })}
+      </View>
+      
+      {/* Offline/Online indicator */}
+      {showOfflineIndicator && (
+        <View style={[
+          styles.offlineIndicator,
+          { backgroundColor: isOnlineMessage ? '#16A34A' : '#DC2626' }
+        ]}>
+          <Text style={styles.offlineText}>
+            {isOnlineMessage ? 'Back online' : 'You are offline'}
+          </Text>
+        </View>
+      )}
     </View>
   );
 };
@@ -197,6 +212,8 @@ const MainNavigation = () => {
   const [user, setUser] = useState({});
   const [siteLogo, setSiteLogo] = useState(null);
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [showOfflineIndicator, setShowOfflineIndicator] = useState(false);
+  const [isOnlineMessage, setIsOnlineMessage] = useState(false);
 
   const systemColorScheme = useColorScheme();
   const dispatch = useDispatch();
@@ -213,26 +230,98 @@ const MainNavigation = () => {
   const users = useSelector((state) => state.users.data);
   const teams = useSelector((state) => state.teams.data);
 
+  // Network connectivity listener - FIXED VERSION
+  useEffect(() => {
+    let offlineTimer = null;
+    let onlineTimer = null;
+
+    const unsubscribe = NetInfo.addEventListener(state => {
+      const isCurrentlyConnected = state.isConnected;
+      
+      // Clear any existing timers
+      if (offlineTimer) {
+        clearTimeout(offlineTimer);
+        offlineTimer = null;
+      }
+      if (onlineTimer) {
+        clearTimeout(onlineTimer);
+        onlineTimer = null;
+      }
+      
+      if (!isCurrentlyConnected) {
+        // Going offline - show "You are offline" in red for 3 seconds
+        setIsOnlineMessage(false);
+        setShowOfflineIndicator(true);
+        
+        offlineTimer = setTimeout(() => {
+          setShowOfflineIndicator(false);
+        }, 3000);
+      } else {
+        // Coming back online - show "Back online" in green for 2 seconds
+        setIsOnlineMessage(true);
+        setShowOfflineIndicator(true);
+        
+        onlineTimer = setTimeout(() => {
+          setShowOfflineIndicator(false);
+        }, 2000);
+      }
+    });
+
+    // Check initial connectivity state
+    NetInfo.fetch().then(state => {
+      if (!state.isConnected) {
+        setIsOnlineMessage(false);
+        setShowOfflineIndicator(true);
+        
+        offlineTimer = setTimeout(() => {
+          setShowOfflineIndicator(false);
+        }, 3000);
+      }
+    });
+
+    return () => {
+      unsubscribe();
+      if (offlineTimer) {
+        clearTimeout(offlineTimer);
+      }
+      if (onlineTimer) {
+        clearTimeout(onlineTimer);
+      }
+    };
+  }, []); // Fixed: Removed problematic dependencies
+
   useEffect(() => {
     const loadTheme = async () => {
-      const savedTheme = await AsyncStorage.getItem('userTheme');
-      setIsDarkMode(savedTheme ? savedTheme === 'dark' : systemColorScheme === 'dark');
+      try {
+        const savedTheme = await AsyncStorage.getItem('userTheme');
+        setIsDarkMode(savedTheme ? savedTheme === 'dark' : systemColorScheme === 'dark');
+      } catch (error) {
+        console.log('Error loading theme:', error);
+        setIsDarkMode(systemColorScheme === 'dark');
+      }
     };
     loadTheme();
   }, [systemColorScheme]);
 
   useEffect(() => {
     const loadPermissions = async () => {
-      const savedPermissions = await AsyncStorage.getItem('userInfo');
-      if (savedPermissions) {
-        const userInfo = JSON.parse(savedPermissions);
-        setUser(userInfo.data.society);
-        const perms = userInfo.data.permissions || [];
-        setPpmAsstPermissions(perms.filter((p) => p.startsWith('PPM_WOV.')).map((p) => p.split('.')[1]));
-        setIssueRequestPermission(perms.filter((p) => p.startsWith('INV_IRQ.')).map((p) => p.split('.')[1]));
-        setPpmWorkorder(perms.filter((p) => p.startsWith('PPM_WRK.')).map((p) => p.split('.')[1]));
-        setComplaintPermissions(perms.filter((p) => p.startsWith('COM.')).map((p) => p.split('.')[1]));
-        setInstructionPermissions(perms.filter((p) => p.startsWith('PPM_IST.')).map((p) => p.split('.')[1]));
+      try {
+        const statusUuids = await workOrderService.getStatuesUuid()
+        console.log(statusUuids.data,'this is uuid resposne')
+    await AsyncStorage.setItem('statusUuid', JSON.stringify(statusUuids.data));
+        const savedPermissions = await AsyncStorage.getItem('userInfo');
+        if (savedPermissions) {
+          const userInfo = JSON.parse(savedPermissions);
+          setUser(userInfo.data.society);
+          const perms = userInfo.data.permissions || [];
+          setPpmAsstPermissions(perms.filter((p) => p.startsWith('PPM_WOV.')).map((p) => p.split('.')[1]));
+          setIssueRequestPermission(perms.filter((p) => p.startsWith('INV_IRQ.')).map((p) => p.split('.')[1]));
+          setPpmWorkorder(perms.filter((p) => p.startsWith('PPM_WRK.')).map((p) => p.split('.')[1]));
+          setComplaintPermissions(perms.filter((p) => p.startsWith('COM.')).map((p) => p.split('.')[1]));
+          setInstructionPermissions(perms.filter((p) => p.startsWith('PPM_IST.')).map((p) => p.split('.')[1]));
+        }
+      } catch (error) {
+        console.log('Error loading permissions:', error);
       }
     };
     loadPermissions();
@@ -240,18 +329,22 @@ const MainNavigation = () => {
 
   useEffect(() => {
     const fetchLogoAndData = async () => {
-      const societyString = await AsyncStorage.getItem('userInfo');
-      if (societyString) {
-        const societyData = JSON.parse(societyString);
-        const parsedImages = JSON.parse(societyData.data.society.data);
-        setSiteLogo(parsedImages.logo);
-      }
-      await workOrderService.getSiteInfo();
-      await workOrderService.getStatuesUuid();
+      try {
+        const societyString = await AsyncStorage.getItem('userInfo');
+        if (societyString) {
+          const societyData = JSON.parse(societyString);
+          const parsedImages = JSON.parse(societyData.data.society.data);
+          setSiteLogo(parsedImages.logo);
+        }
+        await workOrderService.getSiteInfo();
+        await workOrderService.getStatuesUuid();
 
-      if (!users?.length || !teams?.length) {
-        dispatch(fetchAllTeams());
-        dispatch(fetchAllUsers());
+        if (!users?.length || !teams?.length) {
+          dispatch(fetchAllTeams());
+          dispatch(fetchAllUsers());
+        }
+      } catch (error) {
+        console.log('Error fetching logo and data:', error);
       }
     };
     fetchLogoAndData();
@@ -266,15 +359,20 @@ const MainNavigation = () => {
       dispatch(clearAllTeams());
       dispatch(clearAllUsers());
       navigation.replace('Login');
-    } catch {
+    } catch (error) {
+      console.log('Logout error:', error);
       Alert.alert('Error', 'Could not log out. Please try again.');
     }
   };
 
   const handleThemeToggle = async () => {
-    const newTheme = !isDarkMode;
-    setIsDarkMode(newTheme);
-    await AsyncStorage.setItem('userTheme', newTheme ? 'dark' : 'light');
+    try {
+      const newTheme = !isDarkMode;
+      setIsDarkMode(newTheme);
+      await AsyncStorage.setItem('userTheme', newTheme ? 'dark' : 'light');
+    } catch (error) {
+      console.log('Error saving theme:', error);
+    }
   };
 
   return (
@@ -296,7 +394,13 @@ const MainNavigation = () => {
       <View style={styles.content}>
         <Tab.Navigator
           initialRouteName="Home"
-          tabBar={(props) => <CustomTabBar {...props} />}
+          tabBar={(props) => (
+            <CustomTabBar 
+              {...props} 
+              showOfflineIndicator={showOfflineIndicator} 
+              isOnlineMessage={isOnlineMessage} 
+            />
+          )}
           screenOptions={{
             headerShown: false,
           }}
@@ -416,6 +520,19 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 4.65,
     elevation: 8,
+  },
+  offlineIndicator: {
+    paddingVertical: 3,      // Reduced from 6
+    paddingHorizontal: 8,    // Reduced from 12
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 20,           // Reduced from 28
+  },
+  offlineText: {
+    color: '#FFFFFF',
+    fontSize: 10,            // Reduced from 12
+    fontWeight: '500',       // Reduced from '600'
+    textAlign: 'center',
   },
 });
 

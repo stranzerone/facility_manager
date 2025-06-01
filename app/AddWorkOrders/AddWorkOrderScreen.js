@@ -76,6 +76,7 @@ const {nightMode}  = usePermissions()
       }
      
     const response =  await workOrderService.createWorkOrder(workOrderData);
+    console.log(response,'this is response for wo')
     if(response.status == "success"){
       setPopupType('success');
       if(workOrderType==="breakdown"){

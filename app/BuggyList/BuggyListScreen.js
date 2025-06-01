@@ -130,11 +130,21 @@ const BuggyListPage = ({ uuid, wo, restricted, restrictedTime, id, type, sequenc
 
           {data.length ? (
             Object.entries(groupBy(data, 'group')).map(([groupName, items], groupIndex) => (
-              <View key={groupIndex} style={{ marginBottom: 20 }}>
+<View
+  key={groupIndex}
+  style={{
+    marginBottom: 20,
+    paddingBottom: 50,
+backgroundColor: groupIndex % 2 === 1 
+  ? (nightMode ? '#1C1C2E' : '#D0E6FF') 
+  : 'transparent',
+    borderRadius: 10,
+    paddingTop: 8,
+  }}
+>
                 <View
                   style={[
                     styles.groupHeader,
-                    { backgroundColor: nightMode ? '#1E1E1E' : '#f0f6fb' },
                   ]}
                 >
                   <FontAwesome5 name="folder-open" size={18} color={nightMode ? '#E5E5EA' : '#074B7C'} style={styles.groupIcon} />

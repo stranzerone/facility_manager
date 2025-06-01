@@ -45,13 +45,9 @@ export const workOrderService = {
 
     const url = workOrderService.appendParamsInUrl(`${API_URL}/v3/status?`, params);
     const headers = await Util.getCommonAuth()
-    const response = await ApiCommon.getReq(url, headers);
+    return   await ApiCommon.getReq(url, headers);
 
-    if (response.data.data) {
-      await AsyncStorage.setItem('statusUuid', JSON.stringify(response.data.data));
-      return true
-    }
-    return false
+
 
   },
 
@@ -165,6 +161,21 @@ export const workOrderService = {
 
 
 
+    getStatusUuids: async () => {
+    const user = await Common.getLoggedInUser()
+    const params = {
+      "site_id": user.data.societyId,
+      "user-id": user.data.id,
+      "api-token": user.data.api_token,
+    };
+ 
+    const url = workOrderService.appendParamsInUrl(`${API_URL}/v3/status`, params);
+    const headers = await Util.getCommonAuth()
+    return await ApiCommon.getReq(url, headers,params);
+  },
+
+
+
   getAllPms: async ({asset_uuid }) => {
     const user = await Common.getLoggedInUser()
 
@@ -211,6 +222,7 @@ export const workOrderService = {
     const societyInfo = await AsyncStorage.getItem('societyInfo');
     const site_uuid = JSON.parse(societyInfo);
     const storedStatusesString = await AsyncStorage.getItem('statusUuid');
+    console.log(storedStatuses,'this are storedStatuses')
     const storedStatuses = storedStatusesString ? JSON.parse(storedStatusesString) : [];
 
     let user = await Common.getLoggedInUser()
@@ -237,6 +249,7 @@ export const workOrderService = {
     const url = `${API_URL}/v3/${workOrderData.woType}`;
     const headers = await Util.getCommonAuth()
 
+    console.log(data,'thi sis pay')
     return await ApiCommon.postReq(url, data, headers);
   },
 
@@ -558,6 +571,12 @@ createPms: async (payload) => {
     return await ApiCommon.getReq(url, headers);
   },
 
+
+  getOfflineCache: async () => {
+    const url = workOrderService.appendParamsInUrl(`${API_URL}/v4/my/app/cache`);
+    const headers = await Util.getCommonAuth()
+    return await ApiCommon.getReq(url, headers);
+  },
 
 
 
