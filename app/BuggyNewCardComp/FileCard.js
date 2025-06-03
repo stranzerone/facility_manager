@@ -16,6 +16,7 @@ import useConvertToSystemTime from "../TimeConvertot/ConvertUtcToIst";
 import ImageViewing from "react-native-image-viewing";
 import { workOrderService } from "../../services/apis/workorderApis";
 import { usePermissions } from "../GlobalVariables/PermissionsContext";
+import CheckboxCardHeader from "./TopRow";
 
 const FileCard = ({ item, onUpdate, editable }) => {
   const { nightMode } = usePermissions();
@@ -26,13 +27,14 @@ const FileCard = ({ item, onUpdate, editable }) => {
   const updatedTime = useConvertToSystemTime(item?.updated_at);
   const navigation = useNavigation();
 
-  const backgroundColor = editable
+   const backgroundColor = editable
     ? capturedImage
-      ? nightMode ? "#2C2C2E" : "#DFF6DD"
-      : nightMode ? "#1C1C1E" : "#FFFFFF"
+      ? nightMode ? "#254D32" : "#DFF6DD"
+      : nightMode ? "#1F1F1F" : "#FFFFFF"
     : capturedImage
-      ? nightMode ? "#2C2C2E" : "#DCFCE7"
-      : nightMode ? "#1C1C1E" : "#E5E7EB";
+      ? nightMode ? "#1F3F2B" : "#DCFCE7"
+      : nightMode ? "#121212" : "#E5E7EB";
+
 
   const textColor = nightMode ? "#E5E5EA" : "#1F2937";
   const iconColor = nightMode ? "#A1A1AA" : "#1F2937";
@@ -97,26 +99,11 @@ const FileCard = ({ item, onUpdate, editable }) => {
       style={[styles.inputContainer, { backgroundColor }]}
     >
       {/* Header - More compact */}
-      <View className="flex-row justify-between items-center mb-2">
-        <View className="flex-row items-center gap-1.5">
-          <Image
-            source={{ uri: "https://randomuser.me/api/portraits/men/1.jpg" }}
-            style={{ width: 20, height: 20, borderRadius: 3 }}
-          />
-          <Ionicons name="image-outline" size={16} color={iconColor} />
-          {item?.data?.optional && (
-            <View className="flex-row items-center gap-1">
-              <Icon name="info-circle" size={14} color="orange" />
-              <Text className="text-orange-600 font-bold text-xs">Optional</Text>
-            </View>    
-          )}
-        </View>
-        <View className="flex-row gap-2 items-center">
-          <TouchableOpacity onPress={() => alert("Raise Complaint")}>
-            <Icon name="exclamation-circle" size={16} color="red" />
-          </TouchableOpacity>
-        </View>
-      </View>
+      <CheckboxCardHeader
+  item={item}
+  nightMode={nightMode}
+  updatedTime={updatedTime}
+/>
 
       {/* Title - More compact */}
       <View className="flex-row mb-3">
@@ -171,14 +158,7 @@ const FileCard = ({ item, onUpdate, editable }) => {
         <RemarkCard item={item} editable={editable} />
       </View>
 
-      {/* Footer - Only show if there's content */}
-      {(capturedImage && updatedTime) && (
-        <View className="border-t border-gray-200 pt-2">
-          <Text className="text-gray-500 text-xs">
-            Updated: {updatedTime}
-          </Text>
-        </View>
-      )}
+
 
       {/* Fullscreen Image Viewer */}
       {modalVisible && (

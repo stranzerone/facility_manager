@@ -73,6 +73,7 @@ export const complaintService = {
 
 
   createComplaint : async (data) => {
+    console.log(data,'this is input dropwdonw')
     const payload ={
       "complaint_type": data.category.id,
       "constant_society_id": data.society,
@@ -93,6 +94,7 @@ export const complaintService = {
 
 
     closeComplaint : async (payload) => {
+      console.log(payload,'this is paylod')
      let user = await Common.getLoggedInUser()
     console.log(user, "user in close complaint service")
 

@@ -35,6 +35,7 @@ const ComplaintCloseScreen = ({ route }) => {
   const { complaintPermissions } = usePermissions();
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [isImageVisible, setIsImageVisible] = useState(false);
+  console.log(complaint,'this is complaint')
   useEffect(() => {
     fetchComments();
   }, []);
@@ -243,7 +244,7 @@ const ComplaintCloseScreen = ({ route }) => {
                   numberOfLines={1}
                   ellipsizeMode="tail"
                 >
-                  {category}
+                  {category?.name}
                 </Text>
 
               </View>

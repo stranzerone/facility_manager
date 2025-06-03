@@ -6,12 +6,16 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 import useConvertToSystemTime from "../TimeConvertot/ConvertUtcToIst";
 import { workOrderService } from "../../services/apis/workorderApis";
 import { usePermissions } from "../GlobalVariables/PermissionsContext";
+import ImageViewing from "react-native-image-viewing";
+import CheckboxCardHeader from "./TopRow";
 
 const CheckboxCard = ({ item, onUpdate, editable }) => {
   const { nightMode } = usePermissions();
   const [isChecked, setIsChecked] = useState(item.result === "1");
   const updatedTime = useConvertToSystemTime(item?.updated_at);
+  const [modalVisible, setModalVisible] = useState(false);
 
+  console.log(item, 'this is item for check')
   const backgroundColor = editable
     ? isChecked
       ? nightMode ? "#254D32" : "#DFF6DD"
@@ -48,34 +52,16 @@ const CheckboxCard = ({ item, onUpdate, editable }) => {
 
   return (
     <View style={[styles.inputContainer, { backgroundColor }]} className="p-3 border border-gray-200 rounded-md mb-3 shadow-sm">
-      
-      {/* Top Row */}
-      <View className="flex-row items-center justify-between mb-2">
-        {/* Left: Image + Document Icon + Optional Icon */}
-        <View className="flex-row items-center gap-2">
-          <Image
-            source={{ uri: 'https://randomuser.me/api/portraits/men/1.jpg' }}
-            style={{ width: 24, height: 24, borderRadius: 4 }}
-          />
-          <Icon name="file-text" size={18} color={nightMode ? "#E0E0E0" : "#1F2937"} />
-          {item?.data?.optional && (
- <View className="flex-row items-center">
-              
-            <Icon name="info-circle" size={16} color="orange" />
-            <Text className="ml-1 text-red-700 font-bold">Optional</Text>
-            </View>              )}
-        </View>
 
-        {/* Right: Time + Complaint Icon */}
-        <View className="flex-row items-center gap-3">
-          {updatedTime && item?.result && (
-            <Text className="text-xs text-gray-400">{updatedTime}</Text>
-          )}
-          <TouchableOpacity onPress={() => alert('Raise Complaint')}>
-            <Icon name="exclamation-circle" size={18} color="red" />
-          </TouchableOpacity>
-        </View>
-      </View>
+      {/* Top Row */}
+{/* Top Row */}
+<CheckboxCardHeader
+  item={item}
+  nightMode={nightMode}
+  updatedTime={updatedTime}
+  modalVisible={modalVisible}
+  setModalVisible={setModalVisible}
+/>
 
       {/* Checkbox + Title */}
       <View className="flex-row items-center justify-center mb-2">
@@ -88,6 +74,14 @@ const CheckboxCard = ({ item, onUpdate, editable }) => {
 
       {/* Remark */}
       <RemarkCard item={item} editable={editable} />
+      {modalVisible && (
+        <ImageViewing
+          images={[{ uri: item.image }]}
+          imageIndex={0}
+          visible={modalVisible}
+          onRequestClose={() => setModalVisible(false)}
+        />
+      )}
     </View>
   );
 };

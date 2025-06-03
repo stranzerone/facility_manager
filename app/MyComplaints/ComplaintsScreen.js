@@ -69,7 +69,7 @@ const ComplaintsScreen = () => {
 
   const filteredComplaintsMemoized = useMemo(() => {
     if (complaintFilter === 'All') return complaints;
-    return complaints?.filter((c) => c.status === complaintFilter);
+return complaints?.filter((c) => c.status.toLowerCase() === complaintFilter.toLowerCase());
   }, [complaints, complaintFilter]);
 
   const onRefresh = () => {

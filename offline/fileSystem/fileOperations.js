@@ -55,7 +55,7 @@ export const saveImage = async (uri, filename) => {
 
 export const addToQueue = async (name, data) => {
   const QUEUE_FILE_PATH = `${FileSystem.documentDirectory}${name}.json`;
-
+console.log("this is data for queue",data)
   try {
     const existing = await FileSystem.readAsStringAsync(QUEUE_FILE_PATH).catch(() => '[]');
     const queue = JSON.parse(existing);
@@ -125,18 +125,65 @@ export const clearQueue = async (name) => {
 };
 
 
-export const deleteFile = async (filename) => {
-  const QUEUE_FILE_PATH = `${FileSystem.documentDirectory}${name}workorderQueue.json`;
 
+export const deleteFile = async (prefix = 'ch_') => {
   try {
-    const fileInfo = await FileSystem.getInfoAsync(QUEUE_FILE_PATH);
-    if (fileInfo.exists) {
-      await FileSystem.deleteAsync(QUEUE_FILE_PATH, { idempotent: true });
-      console.log("🗑️ File deleted:", filename);
-    } else {
-      console.log("⚠️ File not found:", filename);
+    const files = await FileSystem.readDirectoryAsync(FileSystem.documentDirectory);
+    const matchingFiles = files.filter(file => file.startsWith(prefix));
+
+    if (matchingFiles.length === 0) {
+      console.log(`⚠️ No files found starting with "${prefix}"`);
+      return;
+    }
+
+    for (const file of matchingFiles) {
+      const filePath = `${FileSystem.documentDirectory}${file}`;
+      await FileSystem.deleteAsync(filePath, { idempotent: true });
+      console.log("🗑️ File deleted:", file);
     }
   } catch (error) {
-    console.log("❌ Error deleting file:", error);
+    console.log("❌ Error deleting files:", error);
+  }
+};
+
+
+
+export const updateInstructionInFile = async (ref_uuid, id, resultValue,inCache) => {
+  const fileName = 'ch_instructions';
+  const fileUri = FileSystem.documentDirectory + fileName;
+
+  try {
+    // Read and parse the file
+    const fileContents = await FileSystem.readAsStringAsync(fileUri);
+    const instructionsData = JSON.parse(fileContents);
+
+    if (!instructionsData[ref_uuid]) {
+      console.warn(`⚠️ No entry found for ref_uuid: ${ref_uuid}`);
+      return;
+    }
+
+    // Find the instruction by ID within the array
+    const instructionsArray = instructionsData[ref_uuid];
+    const targetIndex = instructionsArray.findIndex(item => item.id === id);
+
+    if (targetIndex === -1) {
+      console.warn(`⚠️ No instruction found with id: ${id} under ref_uuid: ${ref_uuid}`);
+      return;
+    }
+
+    // Update the fields
+    instructionsArray[targetIndex].result = resultValue;
+    instructionsArray[targetIndex].inCache = inCache;
+
+    // Write the updated data back to the file
+    await FileSystem.writeAsStringAsync(
+      fileUri,
+      JSON.stringify(instructionsData),
+      { encoding: FileSystem.EncodingType.UTF8 }
+    );
+
+    console.log(`✅ Updated instruction id: ${id} for ref_uuid: ${ref_uuid}`);
+  } catch (error) {
+    console.error('❌ Error updating instruction:', error);
   }
 };

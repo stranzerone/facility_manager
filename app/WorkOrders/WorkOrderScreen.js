@@ -6,6 +6,7 @@ import {
   StyleSheet,
   FlatList,
   Modal,
+  ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import FilterOptions from './WorkOrderFilter';
@@ -41,9 +42,12 @@ const WorkOrderPage = ({ route }) => {
   const [selectedFilter, setSelectedFilter] = useState('OPEN');
   const [workOrders, setWorkOrders] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [inputNumber, setInputNumber] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [flag, setFlag] = useState(false);
+  const [pageNo, setPageNo] = useState(0);
+  const [hasMoreData, setHasMoreData] = useState(true);
 
   const navigation = useNavigation();
   const dispatch = useDispatch();
@@ -59,51 +63,92 @@ const WorkOrderPage = ({ route }) => {
     }
   }, []);
 
-  const fetchData = async () => {
-    setLoading(true);
+  const fetchData = async (page = 0, isLoadMore = false) => {
+    if (isLoadMore) {
+      setLoadingMore(true);
+    } else {
+      setLoading(true);
+    }
+
     try {
       let response = null;
       if (qrValue) {
         switch (screenType) {
           case "OW":
             if (wotype === "AS") {
-              const bd = await workOrderService.getAssetWorkOrder(qrValue, selectedFilter, true);
-              const wo = await workOrderService.getAssetWorkOrder(qrValue, selectedFilter, false);
+              const bd = await workOrderService.getAssetWorkOrder(qrValue, selectedFilter, true, page);
+              const wo = await workOrderService.getAssetWorkOrder(qrValue, selectedFilter, false, page);
               console.log(wo,'this are bd')
               const merged = [...wo.data, ...bd.data];
               console.log(merged,'this is merged data')
-              setWorkOrders(merged || []);
+              
+              if (isLoadMore) {
+                setWorkOrders(prev => [...prev, ...merged]);
+              } else {
+                setWorkOrders(merged || []);
+              }
+              
+              // Check if we have more data (assuming 20 items per page)
+              setHasMoreData(merged.length === 20);
             } else {
-              const bd = await workOrderService.getLocationWorkOrder(qrValue, selectedFilter, true);
-              const wo = await workOrderService.getLocationWorkOrder(qrValue, selectedFilter, false);
+              const bd = await workOrderService.getLocationWorkOrder(qrValue, selectedFilter, true, page);
+              const wo = await workOrderService.getLocationWorkOrder(qrValue, selectedFilter, false, page);
               console.log(wo,'this response for wo in woscreen')
               const merged = [...wo.data, ...bd.data];
-              setWorkOrders(merged || []);
+              
+              if (isLoadMore) {
+                setWorkOrders(prev => [...prev, ...merged]);
+              } else {
+                setWorkOrders(merged || []);
+              }
+              
+              setHasMoreData(merged.length === 20);
             }
             break;
           case "ME":
-            response = await getEscalations();
+            response = await getEscalations(page);
             break;
         }
-        if (response) setData(response || []);
+        if (response) {
+          if (isLoadMore) {
+            setWorkOrders(prev => [...prev, ...(response || [])]);
+          } else {
+            setWorkOrders(response || []);
+          }
+          setHasMoreData(response?.length === 20);
+        }
       } else {
         if (screenType === "OW") {
-          response = await workOrderService.getAllWorkOrders(selectedFilter, flag);
+          response = await workOrderService.getAllWorkOrders(selectedFilter, flag, page);
           console.log("workorders",response)
-          setWorkOrders(response.data || []);
+          
+          if (isLoadMore) {
+            setWorkOrders(prev => [...prev, ...(response.data || [])]);
+          } else {
+            setWorkOrders(response.data || []);
+          }
+          
+          // Check if we have more data
+          setHasMoreData(response.data?.length === 20);
         }
       }
     } catch (err) {
-      setError(err.message || "Something went wrong");
+      console.error("Error fetching data:", err.message || "Something went wrong");
     } finally {
       setLoading(false);
+      setLoadingMore(false);
       setRefreshing(false);
     }
   };
+
   console.log(workOrders,'this are workorders')
 
   useEffect(() => {
-    if (type) fetchData();
+    if (type) {
+      setPageNo(0);
+      setHasMoreData(true);
+      fetchData(0, false);
+    }
   }, [type, selectedFilter, flag, qrValue]);
 
   const permissionToAdd =
@@ -113,6 +158,8 @@ const WorkOrderPage = ({ route }) => {
   const applyFilter = (filter) => {
     setSelectedFilter(filter);
     setFilterVisible(false);
+    setPageNo(0);
+    setHasMoreData(true);
   };
 
   const filteredWorkOrders =
@@ -124,10 +171,35 @@ const WorkOrderPage = ({ route }) => {
 
   const onRefresh = () => {
     setRefreshing(true);
-    fetchData();
+    setPageNo(0);
+    setHasMoreData(true);
+    fetchData(0, false);
   };
 
-  const toggleFlag = () => setFlag((prev) => !prev);
+  const toggleFlag = () => {
+    setFlag((prev) => !prev);
+    setPageNo(0);
+    setHasMoreData(true);
+  };
+
+  const handleLoadMore = () => {
+    if (!loadingMore && hasMoreData && workOrders.length > 0) {
+      const nextPage = pageNo + 1;
+      setPageNo(nextPage);
+      fetchData(nextPage, true);
+    }
+  };
+
+  const renderFooter = () => {
+    if (!loadingMore) return null;
+    
+    return (
+      <View style={styles.footerLoader}>
+        <ActivityIndicator size="small" color={colors.icon} />
+        <Text style={[styles.loadingText, { color: colors.text }]}>Loading more...</Text>
+      </View>
+    );
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -194,13 +266,16 @@ const WorkOrderPage = ({ route }) => {
       ) : (
         <FlatList
           data={filteredWorkOrders}
-          keyExtractor={(item, index) => index.toString()}
+          keyExtractor={(item, index) => `${item.wo?.['Sequence No'] || index}-${index}`}
           renderItem={({ item }) => (
             <WorkOrderCard workOrder={item} previousScreen="Work Orders" uuid={qrValue} />
           )}
           contentContainerStyle={styles.contentContainer}
           refreshing={refreshing}
           onRefresh={onRefresh}
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.1}
+          ListFooterComponent={renderFooter}
         />
       )}
 
@@ -254,6 +329,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  footerLoader: {
+    paddingVertical: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    marginTop: 8,
+    fontSize: 14,
   },
 });
 

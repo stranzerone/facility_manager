@@ -35,7 +35,7 @@ const TechnicianDashboard = () => {
   
   const [queueLenghtFile, setQueueLengthFile] = useState(0);
   const [openWoLength, setOpenWoLength] = useState(0);
-  
+  const [futureWo,setFutureWo]  = useState(0)
   // Animation refs for sync status
   const cloudAnimation = useRef(new Animated.Value(0)).current;
   const pulseAnimation = useRef(new Animated.Value(1)).current;
@@ -181,7 +181,7 @@ const TechnicianDashboard = () => {
     {
       id: "UW",
       name: "Upcoming Work",
-      count: 3,
+      count: futureWo,
       icon: "calendar",
       color: "#FFFFFF",
       iconBgColor: "#4CD97B",
@@ -201,7 +201,7 @@ const TechnicianDashboard = () => {
     {
       id: "ME",
       name: "Escalations",
-      count: 2,
+      count: 0,
       icon: "alert-circle",
       color: "#FFFFFF",
       iconBgColor: "#FFD66B",
@@ -252,7 +252,6 @@ const getOpenWoLength = async () => {
   try {
     const response = await readFromFile('ch_workorders');
     const com_response = await readFromFile('ch_complaints');
-    console.log(com_response, 'this com response');
 
     const now = new Date();
 
@@ -261,6 +260,13 @@ const getOpenWoLength = async () => {
       const dueDate = new Date(wo["Due Date"]);
       return dueDate <= now;
     });
+
+
+       const filteredFutureWorkorders = Object.values(response).filter(wo => {
+      const dueDate = new Date(wo["Due Date"]);
+      return dueDate >= now;
+    });
+
 
     // Filter complaints with status === "open"
     const openComplaints = Object.values(com_response.data).filter(
@@ -272,6 +278,7 @@ const getOpenWoLength = async () => {
 
     setComplaintsLength(openComplaints.length);
     setOpenWoLength(filteredWorkorders.length);
+    setFutureWo(filteredFutureWorkorders.length)
   } catch (error) {
     console.log('Error getting open work orders length:', error);
   }
@@ -291,7 +298,7 @@ const getOpenWoLength = async () => {
       return () => {
         if (intervalId) clearInterval(intervalId);
       };
-    }, [syncStatus, queueLenghtFile])
+    }, [syncStatus, queueLenghtFile,fetchingOffline])
   );
 
   const refreshOfflineData = async () => {

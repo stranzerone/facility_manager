@@ -3,12 +3,14 @@ import { View, Text, TextInput, TouchableOpacity, Keyboard } from "react-native"
 import styles from "./styles";
 import Icon from "react-native-vector-icons/FontAwesome";
 import { workOrderService } from "../../services/apis/workorderApis";
+import { usePermissions } from "../GlobalVariables/PermissionsContext";
 const RemarkCard = ({ item,editable }) => {
+  
   // Initialize the remark state based on item.remark, if exists
   const [isEditing, setIsEditing] = useState(false);
   const [remark, setRemark] = useState(item.remarks || ""); // Default to empty string if no remark
-
   // Handle click on title to activate the input
+  const {nightMode}  = usePermissions()
   const handleTitleClick = () => {
     setIsEditing(true); // Activate the input field
   };
@@ -57,8 +59,8 @@ const RemarkCard = ({ item,editable }) => {
         <TouchableOpacity
         disabled={!editable}
         onPress={handleTitleClick}>
-          <Text className="text-xs font-bold text-gray-600 mt-2">
-          <Icon name="pencil" size={16} color="#074B7C" /> 
+          <Text className={`text-xs font-bold text-${nightMode?"white":"#074B7C"} mt-2`}>
+          <Icon name="pencil" size={16}  /> 
           {'  '}
            Remark: {remark || "Click to add remark"}
           </Text>

@@ -143,6 +143,7 @@ const WorkOrderCard = React.memo(({ workOrder, previousScreen, type, uuid }) => 
       style={{
         backgroundColor: cardBgColor,
         padding: 16,
+  
         borderRadius: 12,
         marginVertical: 6,
         marginHorizontal: 2,
@@ -196,9 +197,20 @@ const WorkOrderCard = React.memo(({ workOrder, previousScreen, type, uuid }) => 
 
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
           <Icon name="cogs" size={fontSize + 1} color={iconColor} style={{ marginRight: 8 }} />
-          <Text style={{ color: textColor, fontWeight: 'bold', fontSize: largeFontSize, flex: 1 }}>
-            {woName}
-          </Text>
+        <Text
+  style={{
+    color: textColor,
+    fontWeight: 'bold',
+    fontSize: largeFontSize,
+    textAlignVertical:'center',
+    flex: 1,
+  }}
+  numberOfLines={2}
+  ellipsizeMode="tail"
+>
+  {woName}
+</Text>
+
         </View>
 
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>

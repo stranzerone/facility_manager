@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -11,27 +11,46 @@ import {
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { usePermissions } from "../GlobalVariables/PermissionsContext";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import {APP_VERSION} from "@env"
+import { useDispatch } from "react-redux";
+import { clearAllTeams } from '../../utils/Slices/TeamSlice';
+import { clearAllUsers } from '../../utils/Slices/UsersSlice';
+import { workOrderService } from "../../services/apis/workorderApis";
+import DynamicPopup from "../DynamivPopUps/DynapicPopUpScreen";
+import { clearQueue,deleteFile } from "../../offline/fileSystem/fileOperations";
 
 const MoreScreen = ({ navigation }) => {
   const [animatedItems, setAnimatedItems] = useState({});
   const [notificationSound, setNotificationSound] = useState(true);
+  const [user, setUser] = useState({});
   
+  // Dynamic popup states
+  const [modalVisible, setModalVisible] = useState(false);
+  const [popupConfig, setPopupConfig] = useState({
+    type: 'info',
+    message: '',
+    onOk: null,
+    showCancel: false
+  });
+
   // Get theme and other global states from context
-  const { 
-    nightMode, 
+  const {
+    nightMode,
     setNightMode, // Assuming you have this setter in context
     // Add other context values as needed
   } = usePermissions();
-  
-  const isDarkMode = nightMode;
 
+  const isDarkMode = nightMode;
+  const dispatch = useDispatch()
+  
   // Sample user data - replace with actual user data from context/API
   const userData = {
-    name: "John Technician",
-    technicianId: "TEC001",
+    name: user?.name,
+    technicianId: user?.designation_name,
     email: "john.technician@company.com",
     phone: "+1 (555) 123-4567",
-    department: "Field Services",
+    department: user?.role,
     joinDate: "January 2023",
     profileImage: null, // Add actual image URL when available
     completedJobs: 247,
@@ -67,6 +86,31 @@ const MoreScreen = ({ navigation }) => {
 
   const theme = isDarkMode ? darkTheme : lightTheme;
 
+  // Function to show coming soon popup
+  const showComingSoonPopup = () => {
+    setPopupConfig({
+      type: 'info',
+      message: 'Coming Soon! This feature will be available in the next update.',
+      onOk: () => setModalVisible(false),
+      showCancel: false
+    });
+    setModalVisible(true);
+  };
+
+  // Function to show logout confirmation
+  const showLogoutConfirmation = () => {
+    setPopupConfig({
+      type: 'warning',
+      message: 'You will be logged out. Are you sure you want to log out?',
+      onOk: () => {
+        setModalVisible(false);
+        handleLogout();
+      },
+      showCancel: true
+    });
+    setModalVisible(true);
+  };
+
   // Menu sections configuration
   const menuSections = [
     {
@@ -78,7 +122,7 @@ const MoreScreen = ({ navigation }) => {
           title: "Edit Profile",
           subtitle: "Update your personal information",
           icon: "edit-3",
-          onPress: () => navigation.navigate("EditProfile"),
+          onPress: showComingSoonPopup, // Changed to show coming soon
           showArrow: true,
         },
         {
@@ -86,7 +130,7 @@ const MoreScreen = ({ navigation }) => {
           title: "Change Password",
           subtitle: "Update your security credentials",
           icon: "lock",
-          onPress: () => navigation.navigate("ChangePassword"),
+          onPress: showComingSoonPopup, // Changed to show coming soon
           showArrow: true,
         },
       ],
@@ -124,7 +168,7 @@ const MoreScreen = ({ navigation }) => {
           title: "What's New",
           subtitle: "Latest updates and features",
           icon: "zap",
-          onPress: () => navigation.navigate("WhatsNew"),
+          onPress: showComingSoonPopup, // Changed to show coming soon
           showArrow: true,
           badge: "NEW",
         },
@@ -133,7 +177,7 @@ const MoreScreen = ({ navigation }) => {
           title: "Raise Issue",
           subtitle: "Report a problem or bug",
           icon: "alert-circle",
-          onPress: () => navigation.navigate("RaiseIssue"),
+          onPress: showComingSoonPopup, // Changed to show coming soon
           showArrow: true,
         },
         {
@@ -141,7 +185,7 @@ const MoreScreen = ({ navigation }) => {
           title: "Contact Us",
           subtitle: "Get in touch with support",
           icon: "phone",
-          onPress: () => navigation.navigate("ContactUs"),
+          onPress: showComingSoonPopup, // Changed to show coming soon
           showArrow: true,
         },
         {
@@ -149,7 +193,7 @@ const MoreScreen = ({ navigation }) => {
           title: "About Us",
           subtitle: "Learn more about our company",
           icon: "info",
-          onPress: () => navigation.navigate("AboutUs"),
+          onPress: showComingSoonPopup, // Changed to show coming soon
           showArrow: true,
         },
       ],
@@ -164,26 +208,30 @@ const MoreScreen = ({ navigation }) => {
     setAnimatedItems(prev => ({ ...prev, [itemId]: false }));
   };
 
-  const handleLogout = () => {
-    Alert.alert(
-      "Logout",
-      "Are you sure you want to logout?",
-      [
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
-        {
-          text: "Logout",
-          style: "destructive",
-          onPress: () => {
-            // Handle logout logic here
-            console.log("User logged out");
-            // navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
-          },
-        },
-      ]
-    );
+  useEffect(() => {
+    const fetchUser = async () => {
+      const userData = await AsyncStorage.getItem('userInfo')
+      const user = JSON.parse(userData)
+      setUser(user.data)
+      console.log(user.data)
+    }
+
+    fetchUser()
+  }, [])
+
+  const handleLogout = async () => {
+    try {
+      await workOrderService.appUnrigester()
+      await AsyncStorage.removeItem('userInfo');
+      await clearQueue('queueData')
+      await deleteFile()
+      dispatch(clearAllTeams())
+      dispatch(clearAllUsers())
+      navigation.replace("Login");
+    } catch (error) {
+      console.error('Error clearing local storage', error);
+      Alert.alert('Error', 'Could not log out. Please try again.');
+    }
   };
 
   const renderMenuItem = (item, isLast = false) => (
@@ -207,20 +255,20 @@ const MoreScreen = ({ navigation }) => {
           width: 36,
           height: 36,
           borderRadius: 18,
-          backgroundColor: item.id === "nightMode" && isDarkMode ? 
-            "rgba(255, 255, 255, 0.1)" : 
+          backgroundColor: item.id === "nightMode" && isDarkMode ?
+            "rgba(255, 255, 255, 0.1)" :
             `${theme.primaryColor}15`,
           alignItems: "center",
           justifyContent: "center",
           marginRight: 12,
         }}>
-          <Feather 
-            name={item.icon} 
-            size={18} 
-            color={item.id === "nightMode" && isDarkMode ? 
-              "#FFFFFF" : 
+          <Feather
+            name={item.icon}
+            size={18}
+            color={item.id === "nightMode" && isDarkMode ?
+              "#FFFFFF" :
               theme.primaryColor
-            } 
+            }
           />
         </View>
 
@@ -268,20 +316,20 @@ const MoreScreen = ({ navigation }) => {
           <Switch
             value={item.toggleValue}
             onValueChange={item.onPress}
-            trackColor={{ 
-              false: isDarkMode ? "#39393D" : "#E9E9EA", 
-              true: theme.primaryColor 
+            trackColor={{
+              false: isDarkMode ? "#39393D" : "#E9E9EA",
+              true: theme.primaryColor
             }}
             thumbColor={item.toggleValue ? "#FFFFFF" : "#FFFFFF"}
             ios_backgroundColor={isDarkMode ? "#39393D" : "#E9E9EA"}
           />
         )}
-        
+
         {item.showArrow && (
-          <Feather 
-            name="chevron-right" 
-            size={18} 
-            color={theme.textSecondary} 
+          <Feather
+            name="chevron-right"
+            size={18}
+            color={theme.textSecondary}
           />
         )}
       </View>
@@ -291,10 +339,10 @@ const MoreScreen = ({ navigation }) => {
   return (
     <View style={{ flex: 1, backgroundColor: theme.backgroundColor }}>
       <StatusBar barStyle={theme.statusBarStyle} backgroundColor={theme.backgroundColor} />
-      
+
       {/* Header */}
 
-      <ScrollView 
+      <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{ paddingBottom: 32 }}
         showsVerticalScrollIndicator={false}
@@ -329,15 +377,15 @@ const MoreScreen = ({ navigation }) => {
               elevation: 4,
             }}>
               {userData.profileImage ? (
-                <Image 
-                  source={{ uri: userData.profileImage }} 
+                <Image
+                  source={{ uri: userData.profileImage }}
                   style={{ width: 100, height: 100, borderRadius: 50 }}
                 />
               ) : (
                 <Feather name="user" size={40} color="#FFFFFF" />
               )}
             </View>
-            
+
             <Text style={{
               color: theme.textPrimary,
               fontSize: 24,
@@ -346,7 +394,7 @@ const MoreScreen = ({ navigation }) => {
             }}>
               {userData.name}
             </Text>
-            
+
             <Text style={{
               color: theme.textSecondary,
               fontSize: 16,
@@ -354,7 +402,7 @@ const MoreScreen = ({ navigation }) => {
             }}>
               {userData.technicianId}
             </Text>
-            
+
             <Text style={{
               color: theme.textSecondary,
               fontSize: 14,
@@ -379,7 +427,7 @@ const MoreScreen = ({ navigation }) => {
             }}>
               {section.title}
             </Text>
-            
+
             <View style={{
               backgroundColor: theme.cardBackground,
               marginHorizontal: 16,
@@ -391,7 +439,7 @@ const MoreScreen = ({ navigation }) => {
               shadowRadius: 4,
               elevation: 2,
             }}>
-              {section.items.map((item, itemIndex) => 
+              {section.items.map((item, itemIndex) =>
                 renderMenuItem(item, itemIndex === section.items.length - 1)
               )}
             </View>
@@ -408,14 +456,14 @@ const MoreScreen = ({ navigation }) => {
             color: theme.textSecondary,
             fontSize: 13,
           }}>
-            App Version 2.1.0 (Build 2024.05.30)
+            App Version {APP_VERSION}
           </Text>
         </View>
 
         {/* Logout Button */}
         <View style={{ marginHorizontal: 16, marginTop: 16 }}>
           <Pressable
-            onPress={handleLogout}
+            onPress={showLogoutConfirmation} // Changed to show confirmation popup
             style={({ pressed }) => ({
               backgroundColor: theme.dangerColor,
               borderRadius: 12,
@@ -442,6 +490,16 @@ const MoreScreen = ({ navigation }) => {
             </View>
           </Pressable>
         </View>
+
+        {/* Dynamic Popup */}
+        <DynamicPopup
+          visible={modalVisible}
+          type={popupConfig.type}
+          message={popupConfig.message}
+          onClose={() => setModalVisible(false)}
+          onOk={popupConfig.onOk}
+          showCancel={popupConfig.showCancel}
+        />
       </ScrollView>
     </View>
   );

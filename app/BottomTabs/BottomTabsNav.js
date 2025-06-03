@@ -109,7 +109,7 @@ import MoreScreen from '../MoreOptions/MoreScreen';
 
 const MoreStack = () => (
   <Stack.Navigator screenOptions={{ headerShown: false }}>
-    <Stack.Screen name="More" component={MoreScreen} />
+    <Stack.Screen name="MoreScreen" component={MoreScreen} />
   </Stack.Navigator>
 );
 

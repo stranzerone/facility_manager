@@ -22,6 +22,7 @@ export default function QrScanner({ screenType = "OW" }) {
 
   useFocusEffect(
     useCallback(() => {
+      console.log(scanned,'this is scanned value')
       setScanned(false);
     }, [])
   );
@@ -59,6 +60,7 @@ export default function QrScanner({ screenType = "OW" }) {
 
   const handleBarcodeScanned = async (event) => {
     const data = event.nativeEvent.codeStringValue;
+    console.log(data,'this is qr data')
     setScanned(true);
   
  
@@ -77,6 +79,7 @@ export default function QrScanner({ screenType = "OW" }) {
 
           // Split using '='
           const [siteId, type, uuid] = lastSegment.split("=");
+          console.log(siteId,type,uuid)
         if(siteId == societyId){
           await AsyncStorage.setItem("uuid", uuid);
           await AsyncStorage.setItem("type", type);
@@ -151,6 +154,8 @@ export default function QrScanner({ screenType = "OW" }) {
     } catch (error) {
       console.error("Failed to process QR:", error);
       setScanned(false);
+    } finally{
+      setScanned(false)
     }
   };
   

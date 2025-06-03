@@ -36,14 +36,15 @@ const excludedOfflineRoutes = [
   '/v3/breakdown',
 ];
 
-    const mapWorkorders = (ids = []) => {
-      return ids
-        .map(id => {
-          const wo = ch_workorders[id];
-          return wo ? { as: {}, st: {}, wo } : null;
-        })
-        .filter(Boolean);
-    };
+const mapWorkorders = (ids = [], breakdown = false) => {
+  return ids
+    .map(id => {
+      const wo = ch_workorders[id];
+      // Only return if 'wo' exists and matches the breakdown value
+      return wo && wo.breakdown == breakdown ? { as: {}, st: {}, wo } : null;
+    })
+    .filter(Boolean);
+};
 
     if (!isOffline) {
       console.log(url,headers,'this is url')
@@ -58,23 +59,34 @@ const excludedOfflineRoutes = [
         data: [],
       };
 
+      console.log(url,params,'this is url used')
       switch (true) {
 
 
         case url.includes('/v3/workorder/filter'):
           return { ...responseTemplate, data: mapAllWorkorders().slice(0,20) };
 
-        case url.includes('/v3/workorder/assigned/asset?'):
-          const assetIDs = ch_maps.asset_wo_map[params?.asset_uuid] || [];
-          return { ...responseTemplate, data: mapWorkorders(assetIDs) };
+    case url.includes('/v3/workorder/assigned/asset?'):
+console.log('inside assets',ch_maps)
+  const assetBreakdown =  params?.breakdown 
 
-        case url.includes('/v3/workorder/assigned/location?'):
-          const locationIDs = ch_maps.location_wo_map[params?.location_uuid] || [];
-          return { ...responseTemplate, data: mapWorkorders(locationIDs) };
+  const assetIDKey = params?.asset_uuid?.toString(); // Ensure key is string
+  console.log(assetIDKey,'this are assetIds')
+  const assetIDs = ch_maps[assetIDKey] || [];
+
+  console.log(assetIDs, 'these are asset IDs');
+
+  return { ...responseTemplate, data: mapWorkorders(assetIDs,assetBreakdown).slice(0,2) };
+
+        case url.includes('/v3/workorder/assigned/location'):
+          console.log('inside location')
+            const locationIDKey = params?.location_uuid?.toString(); // Ensure key is string
+             const locationBreakdown =  params?.breakdown 
+          const locationIDs = ch_maps[locationIDKey,locationBreakdown];
+          return { ...responseTemplate, data: mapWorkorders(locationIDs).slice(0,2) };
 
         case url.includes('/v3/insts'):
           console.log(params.ref_uuid,'this are params')
-          console.log(ch_instructions["e23f11ea-0205-471b-b1bf-cd5492b6abdf"],'this are inst')
           return {
             ...responseTemplate,
             data: ch_instructions[params.ref_uuid] || [],

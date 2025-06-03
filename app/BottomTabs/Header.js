@@ -19,23 +19,7 @@ const Header = ({ siteLogo, user }) => {
   const userName = user?.name || "Site"; 
   // console.log(userName, 'this is user on head'); // Keep for debugging if needed
 
-  const handleLogout = async () => {
-    try {
-      // It's good practice to check if appUnrigester is a function if it might be undefined
-      if (workOrderService && typeof workOrderService.appUnrigester === 'function') {
-        await workOrderService.appUnrigester();
-      } else {
-        console.warn('workOrderService.appUnrigester is not available');
-      }
-      await AsyncStorage.removeItem('userInfo');
-      await dispatch(clearAllTeams());
-      await dispatch(clearAllUsers());
-      navigation.replace("Login");
-    } catch (error) {
-      console.error('Error during logout:', error); // Log the actual error
-      Alert.alert('Error', 'Could not log out. Please try again.');
-    }
-  };
+
 
   return (
     <View style={styles.headerWrapper}>
@@ -126,45 +110,40 @@ const Header = ({ siteLogo, user }) => {
 
         {/* Right side - Theme toggle and logout */}
         <View style={styles.rightSection}>
-          <TouchableOpacity 
-            style={[
-              styles.toggleButton, 
-              { 
-                backgroundColor: isDark 
-                  ? 'rgba(55, 65, 81, 0.7)'  // Darker gray for dark mode button
-                  : 'rgba(229, 231, 235, 0.9)', // Lighter gray for light mode button
-                borderColor: isDark 
-                  ? 'rgba(107, 114, 128, 0.3)' 
-                  : 'rgba(156, 163, 175, 0.4)',
-                shadowColor: isDark ? '#A78BFA' : '#3B82F6' // Violet / Blue glow
-              }
-            ]}
-            onPress={() => setNightMode(!nightMode)}
-          >
-            <Icon 
-              name={isDark ? "sun-o" : "moon-o"} 
-              size={16} 
-              color={isDark ? '#FCD34D' : '#4F46E5'} // Amber / Indigo
-            />
-            <View style={[
-              styles.buttonGlow,
-              { backgroundColor: isDark ? '#FCD34D' : '#4F46E5' }
-            ]} />
-          </TouchableOpacity>
+      
 
-          <TouchableOpacity 
-            onPress={handleLogout} 
-            style={[
-              styles.logoutButton,
-              {
-                backgroundColor: isDark ? '#F87171' : '#EF4444', // Slightly lighter red for dark
-                shadowColor: isDark ? '#F87171' : '#EF4444'
-              }
-            ]}
-          >
-            <Icon name="power-off" size={16} color="white" />
-            <View style={[styles.buttonGlow, { backgroundColor: isDark ? '#F87171' : '#EF4444' }]} />
-          </TouchableOpacity>
+       <TouchableOpacity
+       onPress={()=>navigation.navigate('More')}
+  style={[
+    {
+      width: 38,
+      height: 38,
+      borderRadius: 24,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: isDark ? '#374151' : '#F3F4F6', // dark gray or light gray
+      shadowColor: isDark ? '#000' : '#ccc',
+      shadowOpacity: 0.3,
+      shadowOffset: { width: 0, height: 2 },
+      shadowRadius: 4,
+      elevation: 3,
+      position: 'relative',
+    },
+  ]}
+>
+  <Icon name="user" size={20} color={isDark ? '#D1D5DB' : '#374151'} />
+  <View
+    style={{
+      position: 'absolute',
+      width: '100%',
+      height: '100%',
+      borderRadius: 999,
+      backgroundColor: isDark ? '#4B5563' : '#E5E7EB',
+      opacity: 0.15,
+    }}
+  />
+</TouchableOpacity>
+
         </View>
       </View>
     </View>

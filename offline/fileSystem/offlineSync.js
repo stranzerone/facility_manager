@@ -35,7 +35,6 @@ export const syncOfflineQueue = async (queueLength,setQueueLength) => {
           visibilityTime: 3000,
         });
         setQueueLength(queueLength --)
-        console.log("✅ Synced:", item.url);
         removeFromQueue("queueData", item); // Remove from queue after successful sync
       } else {
         console.warn(`⚠️ Sync failed for ${item.url} with status ${response.status}`);

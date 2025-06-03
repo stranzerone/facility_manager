@@ -1,97 +1,76 @@
-// screens/ProfileScreen.js
-import React, { useState } from "react";
-import { ScrollView, View } from "react-native";
-import ProfileHeader from "../components/profile/ProfileHeader";
-import ProfileSettings from "../components/profile/ProfileSettings";
-import ProfileSupport from "../components/profile/ProfileSupport";
+import React from "react";
+import { View, Text, Image } from "react-native";
+import { Feather } from "@expo/vector-icons";
 
-const ProfileScreen = () => {
-  const [isDarkMode, setIsDarkMode] = useState(false);
-  
-  // Dummy user data
-  const userData = {
-    name: "John Smith",
-    technicianId: "TECH-2024-001",
-    department: "IT Support",
-    email: "john.smith@company.com",
-    phone: "+1 (555) 123-4567",
-    profileImage: null, // Set to null to show default icon
-    completedJobs: 127,
-    rating: 4.8,
-    joinDate: "Jan 2023"
-  };
-
-  // Light and Dark themes
-  const lightTheme = {
-    backgroundColor: "#F5F7FA",
-    cardBackground: "#FFFFFF",
-    textPrimary: "#1A1A1A",
-    textSecondary: "#6B7280",
-    primaryColor: "#1996D3",
-    shadowColor: "#000000"
-  };
-
-  const darkTheme = {
-    backgroundColor: "#121212",
-    cardBackground: "#1E1E1E",
-    textPrimary: "#FFFFFF",
-    textSecondary: "#A0A0A0",
-    primaryColor: "#1996D3",
-    shadowColor: "#000000"
-  };
-
-  const theme = isDarkMode ? darkTheme : lightTheme;
-
-  // Dummy handlers
-  const handleLogout = () => {
-    console.log("Logout pressed");
-    // Add logout logic here
-  };
-
-  const handleEditProfile = () => {
-    console.log("Edit profile pressed");
-    // Navigate to edit profile screen
-  };
-
-  const handleToggleDarkMode = () => {
-    setIsDarkMode(!isDarkMode);
+const ProfileSection = ({ theme, isDarkMode }) => {
+  const dummyUser = {
+    name: "John Doe",
+    technicianId: "TECH1234",
+    department: "Maintenance",
+    profileImage: "https://via.placeholder.com/100x100.png?text=User",
   };
 
   return (
-    <ScrollView style={{ 
-      flex: 1, 
-      backgroundColor: theme.backgroundColor 
+    <View style={{
+      backgroundColor: theme.cardBackground,
+      marginHorizontal: 16,
+      marginTop: 16,
+      borderRadius: 16,
+      padding: 24,
+      shadowColor: theme.shadowColor,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: isDarkMode ? 0.3 : 0.15,
+      shadowRadius: 8,
+      elevation: 6,
     }}>
-      <ProfileHeader 
-        userData={userData} 
-        theme={theme} 
-        isDarkMode={isDarkMode} 
-      />
-      
-      <ProfileSettings 
-        theme={theme} 
-        isDarkMode={isDarkMode}
-        onEditProfile={handleEditProfile}
-        onLogout={handleLogout}
-        onToggleDarkMode={handleToggleDarkMode}
-        onNotificationSettings={() => console.log("Notification settings pressed")}
-        onLanguageSettings={() => console.log("Language settings pressed")}
-        onPrivacySettings={() => console.log("Privacy settings pressed")}
-      />
-      
-      <ProfileSupport 
-        theme={theme} 
-        isDarkMode={isDarkMode}
-        onFAQ={() => console.log("FAQ pressed")}
-        onContactSupport={() => console.log("Contact support pressed")}
-        onReportIssue={() => console.log("Report issue pressed")}
-        onRateApp={() => console.log("Rate app pressed")}
-      />
-      
-      {/* Add some bottom padding for better scrolling */}
-      <View style={{ height: 20 }} />
-    </ScrollView>
+      {/* Profile Image and Basic Info */}
+      <View style={{ alignItems: "center", marginBottom: 20 }}>
+        <View style={{
+          width: 100,
+          height: 100,
+          borderRadius: 50,
+          backgroundColor: theme.primaryColor,
+          alignItems: "center",
+          justifyContent: "center",
+          marginBottom: 16,
+          shadowColor: theme.shadowColor,
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.2,
+          shadowRadius: 6,
+          elevation: 4,
+        }}>
+          <Image 
+            source={{ uri: dummyUser.profileImage }}
+            style={{ width: 100, height: 100, borderRadius: 50 }}
+          />
+        </View>
+
+        <Text style={{
+          color: theme.textPrimary,
+          fontSize: 24,
+          fontWeight: "700",
+          marginBottom: 4,
+        }}>
+          {dummyUser.name}
+        </Text>
+
+        <Text style={{
+          color: theme.textSecondary,
+          fontSize: 16,
+          marginBottom: 2,
+        }}>
+          {dummyUser.technicianId}
+        </Text>
+
+        <Text style={{
+          color: theme.textSecondary,
+          fontSize: 14,
+        }}>
+          {dummyUser.department}
+        </Text>
+      </View>
+    </View>
   );
 };
 
-export default ProfileScreen;
+export default ProfileSection;

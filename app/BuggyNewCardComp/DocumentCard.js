@@ -16,6 +16,7 @@ import Icon from "react-native-vector-icons/FontAwesome";
 import useConvertToSystemTime from "../TimeConvertot/ConvertUtcToIst";
 import { workOrderService } from "../../services/apis/workorderApis";
 import { usePermissions } from "../GlobalVariables/PermissionsContext";
+import CheckboxCardHeader from "./TopRow";
 
 const DocumentCard = ({ item, onUpdate, editable }) => {
   const { nightMode } = usePermissions();
@@ -25,12 +26,13 @@ const DocumentCard = ({ item, onUpdate, editable }) => {
   const updatedTime = useConvertToSystemTime(item?.updated_at);
 
   const backgroundColor = editable
-    ? item.result || selectedFile
-      ? nightMode ? "#2C2C2E" : "#DFF6DD"
-      : nightMode ? "#1C1C1E" : "#FFFFFF"
-    : item.result || selectedFile
-      ? nightMode ? "#2C2C2E" : "#DCFCE7"
-      : nightMode ? "#1C1C1E" : "#E5E7EB";
+    ? item.result
+      ? nightMode ? "#254D32" : "#DFF6DD"
+      : nightMode ? "#1F1F1F" : "#FFFFFF"
+    : item.result
+      ? nightMode ? "#1F3F2B" : "#DCFCE7"
+      : nightMode ? "#121212" : "#E5E7EB";
+
 
   const textColor = nightMode ? "#E5E5EA" : "#1F2937";
   const iconColor = nightMode ? "#A1A1AA" : "#1F2937";
@@ -109,30 +111,11 @@ const DocumentCard = ({ item, onUpdate, editable }) => {
       style={[styles.inputContainer, { backgroundColor }]}
     >
       {/* Header */}
-      <View className="flex-row justify-between items-center px-2 pt-2">
-        <View className="flex-row items-center gap-2">
-          <Image
-            source={{ uri: "https://randomuser.me/api/portraits/men/1.jpg" }}
-            style={{ width: 24, height: 24, borderRadius: 4 }}
-          />
-          <FontAwesome name="file-pdf-o" size={18} color={iconColor} />
-          {item?.data?.optional && (
- <View className="flex-row items-center">
-              
-            <Icon name="info-circle" size={16} color="orange" />
-            <Text className="ml-1 text-red-700 font-bold">Optional</Text>
-            </View>              )}
-        </View>
-        <View className="flex-row gap-2 items-center">
-          {updatedTime && item.result && (
-            <Text className="text-xs text-gray-400">{updatedTime}</Text>
-          )}
-          <TouchableOpacity onPress={() => alert("Raise Complaint")}>
-            <Icon name="exclamation-circle" size={18} color="red" />
-          </TouchableOpacity>
-        </View>
-      </View>
-
+<CheckboxCardHeader
+  item={item}
+  nightMode={nightMode}
+  updatedTime={updatedTime}
+/>
       {/* Title */}
       <View className="flex-row p-2">
         <Text className="font-bold text-md mr-2" style={{ color: textColor }}>{item.order}.</Text>

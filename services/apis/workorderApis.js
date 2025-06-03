@@ -4,6 +4,7 @@ import { Util } from "../Util";
 import { API_URL, API_URL3, API_URL2 } from "@env";
 import { Common } from "../Common";
 import { OneSignal } from 'react-native-onesignal';
+import { updateInstructionInFile } from "../../offline/fileSystem/fileOperations";
 
 export const workOrderService = {
 
@@ -138,7 +139,7 @@ export const workOrderService = {
   },
 
 
-  getAllWorkOrders: async (selectedFilter, flag) => {
+  getAllWorkOrders: async (selectedFilter, flag,page_no=1) => {
     const user = await Common.getLoggedInUser()
 
     const params = {
@@ -147,6 +148,7 @@ export const workOrderService = {
       breakdown2: false,
       breakdown: false,
       page_no: 1,
+      skip:(20*page_no),
       Status: selectedFilter,
       user_id: user.data.id,
       'api-token': user.data.api_token,
@@ -510,10 +512,16 @@ export const workOrderService = {
 
 
   updateInstruction: async (payload) => {
-    console.log(payload, 'this is paylod for api call')
+    console.log(payload, 'this is paylod for api call update inst')
     const url = `${API_URL}/v3/inst`;
     const headers = await Util.getCommonAuth()
     const response = await ApiCommon.putReq(url, payload, headers);
+    console.log(response.fromCache,'this is response')
+    if(response.fromCache){
+      await updateInstructionInFile(payload.WoUuId,payload.id,payload.result,true)
+    }else{
+      await updateInstructionInFile(payload.WoUuId,payload.id,payload.result,false)
+    }
     return response
   },
 

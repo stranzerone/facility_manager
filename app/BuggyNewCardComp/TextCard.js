@@ -16,19 +16,22 @@ import Icon from "react-native-vector-icons/FontAwesome";
 import useConvertToSystemTime from "../TimeConvertot/ConvertUtcToIst";
 import { workOrderService } from "../../services/apis/workorderApis";
 import { usePermissions } from "../GlobalVariables/PermissionsContext";
+import CheckboxCardHeader from "./TopRow";
 
 const TextCard = ({ item, onUpdate, editable, type }) => {
+  console.log(item,'for text',editable)
   const { nightMode } = usePermissions();
   const [value, setValue] = useState(item.result || "");
   const updatedTime = useConvertToSystemTime(item?.updated_at);
 
   const backgroundColor = editable
     ? value
-      ? nightMode ? "#2C2C2E" : "#DFF6DD"
-      : nightMode ? "#1C1C1E" : "#FFFFFF"
+      ? nightMode ? "#254D32" : "#DFF6DD"
+      : nightMode ? "#1F1F1F" : "#FFFFFF"
     : value
-      ? nightMode ? "#2C2C2E" : "#DCFCE7"
-      : nightMode ? "#1C1C1E" : "#E5E7EB";
+      ? nightMode ? "#1F3F2B" : "#DCFCE7"
+      : nightMode ? "#121212" : "#E5E7EB";
+
 
   const textColor = nightMode ? "#E5E5EA" : "#1F2937";
   const inputBG = nightMode ? "#2C2C2E" : "#F9FAFB";
@@ -43,7 +46,8 @@ const TextCard = ({ item, onUpdate, editable, type }) => {
         image: false,
       };
 
-      await workOrderService.updateInstruction(payload);
+     const response =  await workOrderService.updateInstruction(payload);
+      console.log("calling on update",response)
       onUpdate();
     } catch (error) {
       console.error("Error updating instruction:", error);
@@ -56,31 +60,11 @@ const TextCard = ({ item, onUpdate, editable, type }) => {
       <View style={[styles.inputContainer, { backgroundColor }]} className="p-3 border border-gray-200 rounded-md mb-3 shadow-sm">
 
         {/* Header Section */}
-        <View className="flex-row items-center justify-between mb-2">
-          <View className="flex-row items-center gap-2">
-            <Image
-              source={{ uri: 'https://randomuser.me/api/portraits/men/1.jpg' }}
-              style={{ width: 24, height: 24, borderRadius: 4 }}
-            />
-            <Icon name="file-text" size={18} color={nightMode ? "#A1A1AA" : "#1F2937"} />
-            {item?.data?.optional && (
- <View className="flex-row items-center">
-              
-            <Icon name="info-circle" size={16} color="orange" />
-            <Text className="ml-1 text-red-700 font-bold">Optional</Text>
-            </View>                )}
-          </View>
-
-          <View className="flex-row items-center gap-3">
-            {value && updatedTime && (
-              <Text className="text-xs text-gray-400">{updatedTime}</Text>
-            )}
-            <TouchableOpacity onPress={() => alert('Raise Complaint')}>
-              <Icon name="exclamation-circle" size={18} color="red" />
-            </TouchableOpacity>
-          </View>
-        </View>
-
+<CheckboxCardHeader
+  item={item}
+  nightMode={nightMode}
+  updatedTime={updatedTime}
+/>
         {/* Title */}
         <View className="flex-row items-start p-2">
           <Text className="font-bold text-md mr-2" style={{ color: textColor }}>{item.order}.</Text>

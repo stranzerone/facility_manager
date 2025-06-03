@@ -31,9 +31,8 @@ const ComplaintCard = ({ data, categroy }) => {
     const user = users?.find((u) => u.user_id === data.created_by);
     return user?.name || '';
   }, [users, data.created_by]);
-
   const myCat = useMemo(() => {
-    return categroy.find((cat) => cat.id === data.complaint_type)?.name || '';
+    return categroy.find((cat) => cat.id === data.complaint_type) || '';
   }, [categroy, data.complaint_type]);
 
   const handlePress = () => {
@@ -67,12 +66,12 @@ const ComplaintCard = ({ data, categroy }) => {
       </View>
 
       {/* Category */}
-      {myCat && (
+      {myCat?.name && (
         <View style={styles.row}>
           <Icon name="list-alt" size={12} color={colors.tagText} />
           <Text style={[styles.label, { color: colors.text }]}>Category:</Text>
           <Text style={[styles.tag, { backgroundColor: colors.tagBg, color: colors.tagText }]}>
-            {myCat}
+            {myCat?.name}
           </Text>
         </View>
       )}
