@@ -26,7 +26,7 @@ const ComplaintCard = ({ data, categroy }) => {
   const { nightMode } = usePermissions();
   const { color, icon } = getStatusStyles(data.status);
   const users = useSelector((state) => state.users.data);
-
+console.log(data,'this comp data')
   const createdByName = useMemo(() => {
     const user = users?.find((u) => u.user_id === data.created_by);
     return user?.name || '';
