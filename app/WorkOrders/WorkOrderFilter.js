@@ -27,7 +27,7 @@ const FilterOptions = ({ filters, selectedFilter, applyFilter, closeFilter }) =>
 
   useEffect(() => {
     Animated.timing(slideAnim, {
-      toValue: 0,
+      toValue: -1,
       duration: 300,
       useNativeDriver: true,
     }).start();

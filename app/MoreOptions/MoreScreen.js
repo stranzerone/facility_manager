@@ -213,7 +213,6 @@ const MoreScreen = ({ navigation }) => {
       const userData = await AsyncStorage.getItem('userInfo')
       const user = JSON.parse(userData)
       setUser(user.data)
-      console.log(user.data)
     }
 
     fetchUser()

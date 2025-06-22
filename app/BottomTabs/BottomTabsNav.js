@@ -6,6 +6,8 @@ import {
   StatusBar,
   Alert,
   Text,
+  Keyboard,
+  Platform,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NavigationContainer, useNavigation } from '@react-navigation/native';
@@ -114,9 +116,23 @@ const MoreStack = () => (
 );
 
 // Custom Tab Bar Component
-const CustomTabBar = ({ state, descriptors, navigation, showOfflineIndicator, isOnlineMessage }) => {
+const CustomTabBar = ({ state, descriptors, navigation, showOfflineIndicator, isOnlineMessage, keyboardVisible }) => {
   const { nightMode } = usePermissions();
   const isDarkMode = nightMode;
+
+  // Hide tab bar when keyboard is visible
+  if (keyboardVisible) {
+    return showOfflineIndicator ? (
+      <View style={[
+        styles.offlineIndicator,
+        { backgroundColor: isOnlineMessage ? '#16A34A' : '#DC2626' }
+      ]}>
+        <Text style={styles.offlineText}>
+          {isOnlineMessage ? 'Back online' : 'You are offline'}
+        </Text>
+      </View>
+    ) : null;
+  }
 
   const tabConfig = [
     { key: 'Home', icon: faHome, label: 'Home' },
@@ -214,6 +230,7 @@ const MainNavigation = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [showOfflineIndicator, setShowOfflineIndicator] = useState(false);
   const [isOnlineMessage, setIsOnlineMessage] = useState(false);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
 
   const systemColorScheme = useColorScheme();
   const dispatch = useDispatch();
@@ -225,10 +242,28 @@ const MainNavigation = () => {
     setComplaintPermissions,
     setInstructionPermissions,
     setPpmWorkorder,
+    setCloseComplaintPermission
   } = usePermissions();
 
   const users = useSelector((state) => state.users.data);
   const teams = useSelector((state) => state.teams.data);
+
+  // Keyboard visibility listener
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      () => setKeyboardVisible(true)
+    );
+    const keyboardDidHideListener = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => setKeyboardVisible(false)
+    );
+
+    return () => {
+      keyboardDidShowListener?.remove();
+      keyboardDidHideListener?.remove();
+    };
+  }, []);
 
   // Network connectivity listener - FIXED VERSION
   useEffect(() => {
@@ -296,7 +331,6 @@ const MainNavigation = () => {
         const savedTheme = await AsyncStorage.getItem('userTheme');
         setIsDarkMode(savedTheme ? savedTheme === 'dark' : systemColorScheme === 'dark');
       } catch (error) {
-        console.log('Error loading theme:', error);
         setIsDarkMode(systemColorScheme === 'dark');
       }
     };
@@ -307,8 +341,7 @@ const MainNavigation = () => {
     const loadPermissions = async () => {
       try {
         const statusUuids = await workOrderService.getStatuesUuid()
-        console.log(statusUuids.data,'this is uuid resposne')
-    await AsyncStorage.setItem('statusUuid', JSON.stringify(statusUuids.data));
+        await AsyncStorage.setItem('statusUuid', JSON.stringify(statusUuids.data));
         const savedPermissions = await AsyncStorage.getItem('userInfo');
         if (savedPermissions) {
           const userInfo = JSON.parse(savedPermissions);
@@ -318,6 +351,9 @@ const MainNavigation = () => {
           setIssueRequestPermission(perms.filter((p) => p.startsWith('INV_IRQ.')).map((p) => p.split('.')[1]));
           setPpmWorkorder(perms.filter((p) => p.startsWith('PPM_WRK.')).map((p) => p.split('.')[1]));
           setComplaintPermissions(perms.filter((p) => p.startsWith('COM.')).map((p) => p.split('.')[1]));
+          setCloseComplaintPermission(perms.filter((p) => p.startsWith('RESCLS.')).map((p) => p.split('.')[1]));
+
+          
           setInstructionPermissions(perms.filter((p) => p.startsWith('PPM_IST.')).map((p) => p.split('.')[1]));
         }
       } catch (error) {
@@ -398,11 +434,13 @@ const MainNavigation = () => {
             <CustomTabBar 
               {...props} 
               showOfflineIndicator={showOfflineIndicator} 
-              isOnlineMessage={isOnlineMessage} 
+              isOnlineMessage={isOnlineMessage}
+              keyboardVisible={keyboardVisible}
             />
           )}
           screenOptions={{
             headerShown: false,
+            tabBarHideOnKeyboard: true, // This is the key prop for React Navigation v6
           }}
         >
           <Tab.Screen 

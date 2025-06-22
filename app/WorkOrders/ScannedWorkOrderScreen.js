@@ -33,7 +33,7 @@ const ScannedWorkOrderPage = ({ route, uuids: passedUuid }) => {
   const [inputNumber, setInputNumber] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
-  
+  console.log("hello")
   const type = route?.params?.type || null;
   const uuid = route?.params?.uuid || passedUuid || null;
 

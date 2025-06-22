@@ -19,7 +19,6 @@ import { usePermissions } from "../GlobalVariables/PermissionsContext";
 import CheckboxCardHeader from "./TopRow";
 
 const TextCard = ({ item, onUpdate, editable, type }) => {
-  console.log(item,'for text',editable)
   const { nightMode } = usePermissions();
   const [value, setValue] = useState(item.result || "");
   const updatedTime = useConvertToSystemTime(item?.updated_at);
@@ -47,7 +46,6 @@ const TextCard = ({ item, onUpdate, editable, type }) => {
       };
 
      const response =  await workOrderService.updateInstruction(payload);
-      console.log("calling on update",response)
       onUpdate();
     } catch (error) {
       console.error("Error updating instruction:", error);

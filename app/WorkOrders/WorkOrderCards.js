@@ -122,9 +122,14 @@ const WorkOrderCard = React.memo(({ workOrder, previousScreen, type, uuid }) => 
   const fontSize = Platform.OS === 'ios' ? 13 : 12;
   const largeFontSize = Platform.OS === 'ios' ? 16 : 15;
   
-  const cardBgColor = nightMode 
+const cardBgColor = workOrderReadPermission || uuid 
+  ? nightMode 
     ? 'rgba(25, 150, 211, 0.12)' 
-    : 'rgba(25, 150, 211, 0.06)';
+    : 'rgba(25, 150, 211, 0.06)' 
+  : nightMode
+    ? 'rgba(150, 150, 150, 0.2)'  // greyish for night mode
+    : 'rgba(200, 200, 200, 0.2)'; // greyish for day mode
+
   
   const textColor = nightMode ? '#E0E7FF' : '#1E3A8A';
   const iconColor = nightMode ? '#93C5FD' : '#3B82F6';

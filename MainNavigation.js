@@ -1,8 +1,8 @@
-import React, { useState,useEffect } from 'react';
+import { useState,useEffect } from 'react';
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
-import { Platform } from 'react-native';
+import { Appearance, Platform } from 'react-native';
 
 import LoginScreen from './app/Login/Login';
 import ForgotPasswordScreen from './app/Login/ForgotPassword/ForgotPasswordScreen';
@@ -18,14 +18,15 @@ import { PermissionsProvider, usePermissions } from './app/GlobalVariables/Permi
 import Toast from 'react-native-toast-message'; // ✅ Required
 import NetInfo from '@react-native-community/netinfo';
 import { syncOfflineQueue } from './offline/fileSystem/offlineSync.js';
+import { Common } from './services/Common.js';
 const Stack = createNativeStackNavigator();
 
 // Wrap navigator to use context inside
 const MainNavigator = () => {
-  const { nightMode } = usePermissions();
+  const { nightMode,setNightMode } = usePermissions();
   const [modalVisible] = useState(true);
-const{syncStatus,setSyncStatus,queueLength,setQueueLength,setSyncTime}  = usePermissions()
-
+const{setSyncStatus,queueLength,setQueueLength,setSyncTime}  = usePermissions()
+const [isLoggedIn,setIsLoggedIn]  = useState(false)
   const MyDarkTheme = {
     ...DarkTheme,
     colors: {
@@ -43,10 +44,16 @@ const{syncStatus,setSyncStatus,queueLength,setQueueLength,setSyncTime}  = usePer
   };
 
 
+
+  const colorScheme = Appearance.getColorScheme();  // returns 'light' or 'dark'
+  if(colorScheme == "dark"){
+    setNightMode(true)
+  }else{
+    setNightMode(false)
+  }
   useEffect(() => {
     let syncInProgress = false;
     let previousIsConnected = false;
-
     const unsubscribe = NetInfo.addEventListener(state => {
       const isNowOnline = state.isConnected;
        
@@ -61,6 +68,11 @@ setSyncTime(formattedTime);
         setTimeout(async () => {
           try {
             setSyncStatus(true)
+            const user = await Common.getLoggedInUser()
+            console.log(user,'this is user')
+            if(!user){
+              return
+            }
             await syncOfflineQueue(queueLength,setQueueLength);
             // setSyncStarted(false)
             Toast.show({
@@ -95,11 +107,12 @@ setSyncTime(formattedTime);
 
   return (
     <>
-      <StatusBar
-        style={nightMode ? 'light' : 'dark'}
-        translucent={true}
-        backgroundColor={nightMode ? '#121212' : '#ffffff'}
-      />
+    <StatusBar
+  style={nightMode ? 'light' : 'dark'}
+  translucent={false}    // no more overlap!
+  backgroundColor={nightMode ? '#121212' : '#ffffff'}
+/>
+
       <NavigationContainer theme={nightMode ? MyDarkTheme : MyLightTheme}>
         <Stack.Navigator
           screenOptions={{

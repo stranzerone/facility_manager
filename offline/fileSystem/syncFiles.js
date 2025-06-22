@@ -7,7 +7,6 @@ export const syncQueuedWorkOrders = async () => {
   try {
     const queue = await getQueue('workorder');
     if (queue.length === 0) return;
-console.log("length of the queue for workorders is ",queue.length)
     for (const payload of queue) {
       try {
       await workOrderService.createWorkOrder(payload);
@@ -26,7 +25,6 @@ console.log("length of the queue for workorders is ",queue.length)
 
 export const syncQueuedComplaints = async () => {
   try {
-    console.log("Syncing complaints...");
     const queue = await getQueue('complaint');
     console.log("length of the queue for complaints is ",queue.length)
     if (queue.length === 0) return;
@@ -34,12 +32,9 @@ export const syncQueuedComplaints = async () => {
     for (const payload of queue) {
       try {
      const response =  await complaintService.createComplaint(payload);
-     console.log("Response for add complaint:", response);
      if(response.status == "Success"){
         await clearQueue('complaint');
-        console.log("🧹 Queue cleared after sync.");
      }
-        console.log("✅ Synced:", payload.Name);
       } catch (e) {
         console.log("❌ Failed to sync one item:", e);
       }

@@ -198,8 +198,8 @@ backgroundColor: groupIndex % 2 === 1
           style={[
             styles.progressBarContainer,
             {
-              right: canComplete ? 70 : 0,
-              left: canComplete ? null : 40,
+              left:canComplete ?0: 40,
+              right:0,
               bottom: isKeyboardOpen ? 0 : 0,
             },
           ]}

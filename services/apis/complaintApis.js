@@ -8,6 +8,9 @@ export const complaintService = {
   getAllComplaints: async () => {
     const user = await Common.getLoggedInUser()
   const params = {
+      all: 1,
+      page_no: 1,
+      per_page: 100,
     "user-id":user.data.id,
     "api-token":user.data.api_token
     };
@@ -67,13 +70,12 @@ export const complaintService = {
  
     const url = `${API_URL2}/staff/addcomment`;
     const headers = await Util.getCommonAuth()
-
-    return await ApiCommon.postReq(url, payload, headers);
+    const response = await ApiCommon.postReq(url,null,headers,formData);
+    return response
   },
 
 
   createComplaint : async (data) => {
-    console.log(data,'this is input dropwdonw')
     const payload ={
       "complaint_type": data.category.id,
       "constant_society_id": data.society,
@@ -94,17 +96,13 @@ export const complaintService = {
 
 
     closeComplaint : async (payload) => {
-      console.log(payload,'this is paylod')
      let user = await Common.getLoggedInUser()
-    console.log(user, "user in close complaint service")
 
 
 
-    console.log(payload,'this is paylod for clsoe complaint')
     const url = `${API_URL2}/staff/updatecomplaint`;
     const headers = await Util.getCommonAuth()
     const response =  await ApiCommon.putReq(url, payload, headers);
-    console.log(response,'this is for clsoe complaint')
     return response;
 
   },
@@ -127,7 +125,8 @@ export const complaintService = {
 
     const url = complaintService.appendParamsInUrl(`${API_URL2}/getmynotifications`, params);
     const headers = await Util.getCommonAuth()
-    return await ApiCommon.getReq(url, headers);
+    const  response  = await ApiCommon.getReq(url, headers);
+    return response
   },
 
   

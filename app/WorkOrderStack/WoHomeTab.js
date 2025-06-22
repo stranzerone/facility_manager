@@ -232,8 +232,6 @@ const TechnicianDashboard = () => {
     }
   };
 
-  console.log(queueLength, 'this is queuelength at init');
-  console.log(fetchingOffline, 'fetchingOffline status from global state');
 
   useFocusEffect(
     useCallback(() => {
@@ -273,9 +271,7 @@ const getOpenWoLength = async () => {
       c => c.status?.toLowerCase() === 'open'
     );
 
-    console.log("Filtered work orders length:", filteredWorkorders.length);
-    console.log("Open complaints length:", openComplaints.length);
-
+ 
     setComplaintsLength(openComplaints.length);
     setOpenWoLength(filteredWorkorders.length);
     setFutureWo(filteredFutureWorkorders.length)

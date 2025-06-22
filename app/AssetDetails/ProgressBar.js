@@ -57,6 +57,7 @@ if(mandatoryItems.length === manCount){
   }, [data]);
 
 
+
   
   const handleComplete = async () => {
    if(!remark){
@@ -66,14 +67,13 @@ if(mandatoryItems.length === manCount){
     try {
       setLock(true)
       const response =  await workOrderService.markAsCompleteWo({item:wo, remark:remark,sequence:sequence});
+     console.log(response,'this is for mark as complete')
       setRemark(''); // Reset the remark input
       setModalVisible(false); // Close the modal
 
-console.log(response,'this is on complete')
       if (response.status == "success") {
         setPopUp(true)
         setTimeout(() => {
-         console.log("going back")
             navigation.goBack();
           
           
@@ -93,7 +93,6 @@ console.log(response,'this is on complete')
   const progress = data.length > 0 ? count / data.length : 0; // Avoid division by zero
   const progressPercentage = count + '/' + data.length;
   const percentage = (count / data.length) * 100;
-
   return (
     <View style={styles.container}>
       <View style={styles.progressContainer}>
@@ -126,7 +125,8 @@ console.log(response,'this is on complete')
                 <Text className="text-white text-xs font-black">COMPLETED</Text>
               </TouchableOpacity>
 
-               ):null
+               ):
+          null
             )
           }
           <Progress.Circle
@@ -204,12 +204,13 @@ const styles = StyleSheet.create({
     borderRadius: 50,
   },
   tickContainer: {
-    width: 220,
+    width: 280,
     height: 40,
     marginRight: 10,
     marginTop: 10,
     backgroundColor: '#4CAF50',
-    borderRadius: 25,
+borderTopLeftRadius: 25,
+borderBottomLeftRadius: 25,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',

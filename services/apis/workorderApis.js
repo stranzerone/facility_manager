@@ -1,10 +1,12 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ApiCommon } from "../ApiCommon";
 import { Util } from "../Util";
-import { API_URL, API_URL3, API_URL2 } from "@env";
+import { API_URL, API_URL3, API_URL2, APP_VERSION_CODE, APP_ID_ONE_SIGNAL } from "@env";
 import { Common } from "../Common";
 import { OneSignal } from 'react-native-onesignal';
-import { updateInstructionInFile } from "../../offline/fileSystem/fileOperations";
+import { updateInstructionInFile, updateWorkOrderInFile } from "../../offline/fileSystem/fileOperations";
+import * as ImageManipulator from "expo-image-manipulator";
+import * as FileSystem from "expo-file-system";
 
 export const workOrderService = {
 
@@ -20,13 +22,12 @@ export const workOrderService = {
     const url = workOrderService.appendParamsInUrl(`${API_URL2}/linkedsites`, params);
     const headers = await Util.getCommonAuth()
     const response = await ApiCommon.getReq(url, headers);
-    console.log(response,"this is response for site info" )
-    if (response.data) {    
-     const data = response.data[user.data.societyId].ppm_site.uuid    ;
-    await AsyncStorage.setItem('societyInfo', JSON.stringify(data));
-    return data
+    if (response.data) {
+      const data = response.data[user.data.societyId].ppm_site.uuid;
+      await AsyncStorage.setItem('societyInfo', JSON.stringify(data));
+      return data
 
-    
+
     } else {
       return false
     }
@@ -46,7 +47,7 @@ export const workOrderService = {
 
     const url = workOrderService.appendParamsInUrl(`${API_URL}/v3/status?`, params);
     const headers = await Util.getCommonAuth()
-    return   await ApiCommon.getReq(url, headers);
+    return await ApiCommon.getReq(url, headers);
 
 
 
@@ -61,7 +62,6 @@ export const workOrderService = {
       "api-token": user.data.api_token,
     };
     const url = workOrderService.appendParamsInUrl(`${API_URL}/v3/teams?`, params);
-    console.log(url,'this team url')
     const headers = await Util.getCommonAuth()
     return await ApiCommon.getReq(url, headers);
   },
@@ -69,7 +69,6 @@ export const workOrderService = {
 
 
   getAllUsers: async () => {
-    console.log("getting all users")
     const user = await Common.getLoggedInUser()
     const params = {
       "user-id": user.data.id,
@@ -78,9 +77,7 @@ export const workOrderService = {
 
     const url = workOrderService.appendParamsInUrl(`${API_URL2}/nonresidents`, params);
     const headers = await Util.getCommonAuth()
-    console.log(url,'this is url for callign users')
-    const response =  await ApiCommon.getReq(url, headers);
-    console.log(response, "this is resposne for all suers")
+    const response = await ApiCommon.getReq(url, headers);
     return response
   },
 
@@ -117,29 +114,57 @@ export const workOrderService = {
   },
 
 
+  appRegisterOneSignal: async () => {
+    try {
+      const userInfo = await AsyncStorage.getItem('userInfo');
+      if (!userInfo) throw new Error('User information not found');
+      const deviceId = await OneSignal.User.pushSubscription.getIdAsync();
+
+      const payload = {
+        app_name: 'ism-staff',
+        app_version_code: APP_VERSION_CODE,
+        app_device_id: deviceId,
+        userId: deviceId,
+        app_id: deviceId,
+        tenant: 0,
+      };
+
+      const url = `${API_URL2}/appRegistered`;
+      const headers = await Util.getCommonAuth();
+      const params = { app_id: APP_ID_ONE_SIGNAL };
+
+      const response = await ApiCommon.postReq(url, payload, headers, params);
+      return response
+    } catch (error) {
+      console.error('Error registering app with OneSignal:', error);
+      throw error;
+    }
+  },
 
 
- getFutureWo: async (fromDate, toDate) => {
+
+
+  getFutureWo: async (fromDate, toDate) => {
     const user = await Common.getLoggedInUser()
 
     const params = {
-      society_id:user.data.societyId,
-        from:fromDate,
-        to: toDate,
-        self_assigned:"true",
-        future_wo:"true"
+      society_id: user.data.societyId,
+      from: fromDate,
+      to: toDate,
+      self_assigned: "true",
+      future_wo: "true"
     };
 
     const url = workOrderService.appendParamsInUrl(`${API_URL}/v3/callender/workorders`, params);
     const headers = await Util.getCommonAuth()
-  return  await ApiCommon.getReq(url, headers);
+    return await ApiCommon.getReq(url, headers);
 
-    
+
 
   },
 
 
-  getAllWorkOrders: async (selectedFilter, flag,page_no=1) => {
+  getAllWorkOrders: async (selectedFilter, flag, page_no = 1) => {
     const user = await Common.getLoggedInUser()
 
     const params = {
@@ -148,7 +173,7 @@ export const workOrderService = {
       breakdown2: false,
       breakdown: false,
       page_no: 1,
-      skip:(20*page_no),
+      skip: (20 * page_no),
       Status: selectedFilter,
       user_id: user.data.id,
       'api-token': user.data.api_token,
@@ -158,27 +183,28 @@ export const workOrderService = {
     }
     const url = workOrderService.appendParamsInUrl(`${API_URL}/v3/workorder/filter`, params);
     const headers = await Util.getCommonAuth()
-    return await ApiCommon.getReq(url, headers,params);
+    const response = await ApiCommon.getReq(url, headers, params);
+    return response
   },
 
 
 
-    getStatusUuids: async () => {
+  getStatusUuids: async () => {
     const user = await Common.getLoggedInUser()
     const params = {
       "site_id": user.data.societyId,
       "user-id": user.data.id,
       "api-token": user.data.api_token,
     };
- 
+
     const url = workOrderService.appendParamsInUrl(`${API_URL}/v3/status`, params);
     const headers = await Util.getCommonAuth()
-    return await ApiCommon.getReq(url, headers,params);
+    return await ApiCommon.getReq(url, headers, params);
   },
 
 
 
-  getAllPms: async ({asset_uuid }) => {
+  getAllPms: async ({ asset_uuid }) => {
     const user = await Common.getLoggedInUser()
 
     const params = {
@@ -192,13 +218,12 @@ export const workOrderService = {
     if (asset_uuid) {
       params.asset_uuid = asset_uuid
     }
-    console.log(params,'this are params')
     let url;
 
-    if(asset_uuid){
-     url = workOrderService.appendParamsInUrl(`${API_URL}/v3/asset/pm`, params);
-    }else{
-           url = workOrderService.appendParamsInUrl(`${API_URL}/v3/pm/all`, params);
+    if (asset_uuid) {
+      url = workOrderService.appendParamsInUrl(`${API_URL}/v3/asset/pm`, params);
+    } else {
+      url = workOrderService.appendParamsInUrl(`${API_URL}/v3/pm/all`, params);
 
     }
     const headers = await Util.getCommonAuth()
@@ -224,7 +249,6 @@ export const workOrderService = {
     const societyInfo = await AsyncStorage.getItem('societyInfo');
     const site_uuid = JSON.parse(societyInfo);
     const storedStatusesString = await AsyncStorage.getItem('statusUuid');
-    console.log(storedStatuses,'this are storedStatuses')
     const storedStatuses = storedStatusesString ? JSON.parse(storedStatusesString) : [];
 
     let user = await Common.getLoggedInUser()
@@ -250,8 +274,6 @@ export const workOrderService = {
     }
     const url = `${API_URL}/v3/${workOrderData.woType}`;
     const headers = await Util.getCommonAuth()
-
-    console.log(data,'thi sis pay')
     return await ApiCommon.postReq(url, data, headers);
   },
 
@@ -283,7 +305,6 @@ export const workOrderService = {
     const url = workOrderService.appendParamsInUrl(`${API_URL}/v3/workorder/assigned/asset?`, params);
     const headers = await Util.getCommonAuth()
     const response = await ApiCommon.getReq(url, headers, params);
-    console.log(response,'this is resposne on api')
     return response
   },
 
@@ -304,11 +325,9 @@ export const workOrderService = {
       "api-token": user.data.api_token,
       "user-id": user.data.id
     };
-    console.log(params,'this are for loatin api')
     const url = workOrderService.appendParamsInUrl(`${API_URL}/v3/workorder/assigned/location?`, params);
     const headers = await Util.getCommonAuth()
     const response = await ApiCommon.getReq(url, headers, params);
-    console.log(response,'this is for location wo response')
     return response
   },
 
@@ -355,8 +374,7 @@ export const workOrderService = {
   getInstructionsComments: async (params) => {
     const url = workOrderService.appendParamsInUrl(`${API_URL}/v3/comments?`, params);
     const headers = await Util.getCommonAuth()
-    const response =  await ApiCommon.getReq(url, headers);
-    console.log("these are response")
+    const response = await ApiCommon.getReq(url, headers);
     return response
   },
 
@@ -417,14 +435,13 @@ export const workOrderService = {
       instruction_remark: remark,
       uuid: item.uuid,
     };
-
+     await updateWorkOrderInFile(item.uuid,"COMPLETED")
     return await ApiCommon.putReq(url, payload, headers);
   },
 
 
 
-    updateDelayResone: async ( uuid, delayReason) => {
-      console.log("updating delay reasone")
+  updateDelayResone: async (uuid, delayReason) => {
     const societyInfo = await AsyncStorage.getItem('societyInfo');
     let user = await Common.getLoggedInUser()
     const site_uuid = JSON.parse(societyInfo)
@@ -511,32 +528,28 @@ export const workOrderService = {
 
 
 
-  updateInstruction: async (payload) => {
-    console.log(payload, 'this is paylod for api call update inst')
-    const url = `${API_URL}/v3/inst`;
+  updateInstruction: async (payload, formData, id) => {
+    console.log(payload,'this is on update inst')
+    const url = `${API_URL}/v3/inst?id=${id}`;
     const headers = await Util.getCommonAuth()
-    const response = await ApiCommon.putReq(url, payload, headers);
-    console.log(response.fromCache,'this is response')
-    if(response.fromCache){
-      await updateInstructionInFile(payload.WoUuId,payload.id,payload.result,true)
-    }else{
-      await updateInstructionInFile(payload.WoUuId,payload.id,payload.result,false)
+    const response = await ApiCommon.putReq(url, payload, headers, formData);
+    if (response.fromCache) {
+      await updateInstructionInFile(payload.WoUuId, payload.id, payload.result, true)
+    } else {
+      await updateInstructionInFile(payload.WoUuId, payload.id, payload.result, false)
     }
     return response
   },
 
-createPms: async (payload) => {
-    console.log(payload, 'this is paylod for api call')
+  createPms: async (payload) => {
     const url = `${API_URL}/v3/action/createwofrompm`;
     const headers = await Util.getCommonAuth()
     const response = await ApiCommon.postReq(url, payload, headers);
-    console.log('this is url for create psm',response)
     return response
   },
 
 
   addPdfToServer: async (data) => {
-
     let user = await Common.getLoggedInUser()
     const formData = new FormData();
     formData.append('name', data.fileName); // File name
@@ -552,10 +565,9 @@ createPms: async (payload) => {
     formData.append('user-id', user.data.id);
     formData.append('api-token', user.data.api_token);
     const url = `${API_URL3}/v1/society/${user.data.societyId}/publicupload`;
-    const headers = {
-      'Content-Type': 'multipart/form-data', // Correct header for file upload
-    }
-    const response = await ApiCommon.postReq(url, formData, headers);
+    const headers = await Util.getCommonAuth()
+
+    const response = await ApiCommon.postReq(url, null, headers, formData);
     // if(response.url){
     //   const payload = {
     //     id:date.uuid,
@@ -568,6 +580,103 @@ createPms: async (payload) => {
     // }
     return response
   },
+
+
+   compressAndConvertToBase64 : async (uri) => {
+    try {
+      const manipulatedImage = await ImageManipulator.manipulateAsync(
+        uri,
+        [{ resize: { width: 800 } }],
+        { compress: 0.5, format: ImageManipulator.SaveFormat.JPEG }
+      );
+
+      const base64 = await FileSystem.readAsStringAsync(manipulatedImage.uri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+
+      return `data:image/jpeg;base64,${base64}`;
+    } catch (error) {
+      console.error('Error compressing or converting image:', error);
+      Alert.alert('Error', 'Failed to process the image. Please try again.');
+      return null;
+    }
+  },
+
+
+  addPdfToServerInstruction: async (uri, paylod,isConnected) => {
+    let user = await Common.getLoggedInUser()
+const extension = uri.split('.').pop().toLowerCase();
+const isImage = ['jpg', 'jpeg', 'png', 'heic', 'webp'].includes(extension);
+const isPdf = extension === 'pdf';
+
+let base64Image = null;
+
+if (isImage) {
+  base64Image = await workOrderService.compressAndConvertToBase64(uri);
+} else if (isPdf) {
+  console.log('Skipping compression for PDF file:', uri);
+
+  // If you want PDF as base64 — you can also do:
+  base64Image = await FileSystem.readAsStringAsync(uri, {
+    encoding: FileSystem.EncodingType.Base64,
+  });
+} else {
+  console.log('Unsupported file type:', extension);
+}
+
+// Build FormData
+const formData = new FormData();
+
+const fileName = `${Date.now()}.${extension}`;
+const mimeType = isImage
+  ? `image/jpeg`
+  : isPdf
+  ? `application/pdf`
+  : '';
+
+if (base64Image) {
+  formData.append('name', fileName);
+  formData.append('type', 'instruction'); // Your existing type field
+  formData.append('file', base64Image);   // sending base64
+}
+
+
+         formData.append('user-id', user.data.id);
+         formData.append('api-token', user.data.api_token);
+    const url = `${API_URL3}/v1/society/${user.data.societyId}/publicupload`;
+    const headers = await Util.getCommonAuth()
+    let response;
+     if(isConnected){
+      response = await ApiCommon.postReq(url,paylod, headers, formData);
+     }else{
+       response = await ApiCommon.postReq(url,paylod, headers, uri);
+
+     }
+    console.log(response,'this is image response')
+    await updateInstructionInFile(paylod.WoUuId, paylod.id, paylod.result, true)
+    if (isConnected) {
+      paylod.result = response.data.url
+
+      console.log(paylod,'this is uplod paylod')
+      const responseUpdate = await workOrderService.updateInstruction(paylod)
+      return responseUpdate
+    } else {
+      return response
+    }
+
+    // if(response.url){
+    //   const payload = {
+    //     id:date.uuid,
+    //     result: response.url, 
+    //     remark:""
+    //   }
+
+    //   const response = await workOrderService.updateInstruction(payload)
+    //   console.log(response.data,'this is response for update instruction after getting url')
+    // }
+
+  },
+
 
 
 

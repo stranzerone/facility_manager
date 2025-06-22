@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Text,
   View,
@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import QrScanner from "./QrScannerComp";
-import { useNavigation } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { usePermissions } from "../GlobalVariables/PermissionsContext";
 import { workOrderService } from "../../services/apis/workorderApis";
 
@@ -18,6 +18,7 @@ export default function MainScannerPage({ route }) {
   const [loading, setLoading] = useState(true);
   const [showOptions, setShowOptions] = useState(false);
   const [hasPermission, setPermission] = useState(false);
+const [refreshKey, setRefreshKey] = useState(0);
 
   const { ppmAsstPermissions, nightMode } = usePermissions();
   const navigation = useNavigation();
@@ -30,6 +31,15 @@ export default function MainScannerPage({ route }) {
     border: nightMode ? "#2f2f2f" : "#074B7C",
     icon: "#074B7C",
   };
+
+
+
+  useFocusEffect(
+     useCallback(() => {
+    console.log("MainScannerPage focused, refreshing...");
+    setRefreshKey((prev) => prev + 1);
+  }, [])
+);
 
   useEffect(() => {
     if (ppmAsstPermissions?.some((permission) => permission.includes("R"))) {
@@ -66,7 +76,7 @@ export default function MainScannerPage({ route }) {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View key={refreshKey} style={[styles.container, { backgroundColor: colors.background }]}>
       <View className="h-[10%]">
         {hasPermission && (
           <TouchableOpacity

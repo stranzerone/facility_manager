@@ -125,7 +125,6 @@ const NewComplaintPage = ({ route }) => {
       image: longUrl,
       selfAssign,
     };
-
     try {
       const response = await complaintService.createComplaint(data);
       if (response.status === 'success') {
@@ -134,12 +133,10 @@ const NewComplaintPage = ({ route }) => {
         setPopupVisible(true);
         setTimeout(() => {
           setPopupVisible(false);
-          navigation.dispatch(
-            CommonActions.reset({
-              index: 0,
-              routes: [{ name: 'Service Request' }],
-            })
-          );
+navigation.reset({
+  index: 0,
+  routes: [{ name: 'ServiceRequests' }],
+});
         }, 1000);
       } else {
         throw new Error('Submission failed');

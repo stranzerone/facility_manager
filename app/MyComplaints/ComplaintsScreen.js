@@ -23,6 +23,7 @@ const ComplaintsScreen = () => {
   const navigation = useNavigation();
   const { complaintPermissions, complaintFilter, setComplaintFilter, nightMode } = usePermissions();
   const [categories, setCategories] = useState([]);
+  const [locations, setLocations] = useState();
 
   const colors = {
     background: nightMode ? '#121212' : '#f9f9f9',
@@ -38,7 +39,6 @@ const ComplaintsScreen = () => {
     try {
       setLoading(true);
       const response = await complaintService.getAllComplaints();
-      console.log(response,'this is response for complaints')
       setComplaints(response.data || []);
     } catch {
       setComplaints([]);
@@ -48,6 +48,15 @@ const ComplaintsScreen = () => {
     }
   }, []);
 
+  const fetchLocations = async () => {
+    try {
+      const response = await complaintService.getComplaintLocations();
+      setLocations(response);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
   const fetchCategories = useCallback(async () => {
     try {
       const response = await complaintService.getComplaintCategories();
@@ -55,7 +64,7 @@ const ComplaintsScreen = () => {
         setCategories(Object.values(response.data));
       }
     } catch (error) {
-      console.error("Error fetching complaints:", error);
+      console.error('Error fetching complaints:', error);
     }
   }, []);
 
@@ -65,11 +74,12 @@ const ComplaintsScreen = () => {
 
   useEffect(() => {
     fetchCategories();
+    fetchLocations();
   }, [fetchCategories]);
 
   const filteredComplaintsMemoized = useMemo(() => {
     if (complaintFilter === 'All') return complaints;
-return complaints?.filter((c) => c.status.toLowerCase() === complaintFilter.toLowerCase());
+    return complaints?.filter((c) => c.status.toLowerCase() === complaintFilter.toLowerCase());
   }, [complaints, complaintFilter]);
 
   const onRefresh = () => {
@@ -88,6 +98,7 @@ return complaints?.filter((c) => c.status.toLowerCase() === complaintFilter.toLo
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.button }]}>
         <TouchableOpacity
           style={styles.filterButton}
@@ -97,7 +108,7 @@ return complaints?.filter((c) => c.status.toLowerCase() === complaintFilter.toLo
           <Text style={[styles.filterText, { color: colors.whiteText }]}>Filter</Text>
         </TouchableOpacity>
 
-        <View style={styles.selectedStatusContainer}>
+        <View>
           <Text
             style={[
               styles.selectedStatus,
@@ -128,9 +139,21 @@ return complaints?.filter((c) => c.status.toLowerCase() === complaintFilter.toLo
         </TouchableOpacity>
       </View>
 
+      {/* Filter Options */}
       {showFilter && (
         <FilterOptions
-          filters={['All', 'Open', 'Hold', 'Cancelled', 'WIP', 'Closed', 'Reopen', 'Completed', 'Resolved', 'Working']}
+          filters={[
+            'All',
+            'Open',
+            'Hold',
+            'Cancelled',
+            'WIP',
+            'Closed',
+            'Reopen',
+            'Completed',
+            'Resolved',
+            'Working',
+          ]}
           selectedFilter={complaintFilter}
           applyFilter={(status) => {
             setComplaintFilter(status);
@@ -140,27 +163,36 @@ return complaints?.filter((c) => c.status.toLowerCase() === complaintFilter.toLo
         />
       )}
 
-      {filteredComplaintsMemoized.length === 0 ? (
-        <View style={styles.noComplaintsContainer}>
-          <FontAwesome name="exclamation-circle" size={30} color={colors.textMuted} />
-          <Text style={[styles.noComplaintsText, { color: colors.textMuted }]}>
-            No Complaints Found
-          </Text>
-        </View>
-      ) : complaintPermissions.some((p) => p.includes('R')) ? (
-        <FlatList
-          data={filteredComplaintsMemoized}
-          keyExtractor={(item) => item.id.toString()}
-          renderItem={({ item }) => (
-            <ComplaintCard data={item} categroy={categories} nightMode={nightMode} />
-          )}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        />
-      ) : (
-        <View style={styles.noComplaintsContainer}>
-          <Text style={{ color: colors.text }}>Not Authorized to view complaints</Text>
-        </View>
-      )}
+      {/* List or Empty State */}
+      <FlatList
+        data={filteredComplaintsMemoized}
+        keyExtractor={(item) => item.id?.toString() || Math.random().toString()}
+        renderItem={({ item }) => (
+          <ComplaintCard
+            data={item}
+            categroy={categories}
+            nightMode={nightMode}
+            locations={locations}
+          />
+        )}
+        ListEmptyComponent={() => (
+          <View style={styles.noComplaintsContainer}>
+            {complaintPermissions.some((p) => p.includes('R')) ? (
+              <>
+                <FontAwesome name="exclamation-circle" size={30} color={colors.textMuted} />
+                <Text style={[styles.noComplaintsText, { color: colors.textMuted }]}>
+                  No Complaints Found
+                </Text>
+              </>
+            ) : (
+              <Text style={{ color: colors.text }}>Not Authorized to view complaints</Text>
+            )}
+          </View>
+        )}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      />
     </View>
   );
 };
@@ -169,6 +201,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
+    paddingBottom: 0,
   },
   loadingContainer: {
     flex: 1,
@@ -183,6 +216,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingVertical: 20,
   },
   noComplaintsText: {
     fontSize: 16,
@@ -192,7 +226,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 12,
+    padding: 10,
     borderRadius: 8,
     marginBottom: 12,
   },
@@ -205,10 +239,6 @@ const styles = StyleSheet.create({
   filterText: {
     marginLeft: 8,
     fontSize: 16,
-  },
-  selectedStatusContainer: {
-    flex: 1,
-    alignItems: 'center',
   },
   selectedStatus: {
     fontSize: 15,

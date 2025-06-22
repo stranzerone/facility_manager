@@ -1,5 +1,5 @@
 import { useNavigation } from '@react-navigation/native';
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import useConvertToSystemTime from '../TimeConvertot/ConvertUtcToIst';
@@ -21,12 +21,11 @@ const getStatusStyles = (status) => {
   }
 };
 
-const ComplaintCard = ({ data, categroy }) => {
+const ComplaintCard = ({ data, categroy,locations }) => {
   const navigation = useNavigation();
   const { nightMode } = usePermissions();
   const { color, icon } = getStatusStyles(data.status);
   const users = useSelector((state) => state.users.data);
-console.log(data,'this comp data')
   const createdByName = useMemo(() => {
     const user = users?.find((u) => u.user_id === data.created_by);
     return user?.name || '';
@@ -43,6 +42,10 @@ console.log(data,'this comp data')
     });
   };
 
+
+const myLocation = Array.isArray(locations)
+  ? locations.find((e) => e.id == data?.constant_society_id)
+  : null;
   const colors = {
     bg: nightMode ? '#1e1e1e' : '#fff',
     text: nightMode ? '#e0e0e0' : '#333',
@@ -80,7 +83,15 @@ console.log(data,'this comp data')
       <Text numberOfLines={2} style={[styles.description, { color: colors.muted }]}>
         {data.description}
       </Text>
-
+      {myLocation?.name && (
+        <View style={styles.row}>
+          <Icon name="list-alt" size={12} color={colors.tagText} />
+          <Text style={[styles.label, { color: colors.text }]}>Location:</Text>
+          <Text style={[styles.tag, { backgroundColor: colors.tagBg, color: colors.tagText }]}>
+            {myLocation?.name}
+          </Text>
+        </View>
+      )}
       {/* Footer Info */}
       <View style={styles.footer}>
         {createdByName && (

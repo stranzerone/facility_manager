@@ -22,7 +22,6 @@ export default function QrScanner({ screenType = "OW" }) {
 
   useFocusEffect(
     useCallback(() => {
-      console.log(scanned,'this is scanned value')
       setScanned(false);
     }, [])
   );
@@ -36,7 +35,6 @@ export default function QrScanner({ screenType = "OW" }) {
     try {
       const response = await InventoryServices.getWareHouseStatus();
       const warehouse = response?.data?.find((item) => item.uuid === uuid);
-      console.log(warehouse)
       return warehouse?.Active || false;
     } catch (error) {
       console.error("Error retrieving warehouse info:", error.message || error);
@@ -60,7 +58,6 @@ export default function QrScanner({ screenType = "OW" }) {
 
   const handleBarcodeScanned = async (event) => {
     const data = event.nativeEvent.codeStringValue;
-    console.log(data,'this is qr data')
     setScanned(true);
   
  
@@ -71,15 +68,13 @@ export default function QrScanner({ screenType = "OW" }) {
   
       const parsedUserInfo = JSON.parse(userInfo);
       const societyId = parsedUserInfo.data.societyId;
-  
       switch (true) {
         // QR from Factech App
-        case data.includes("app.factech"):
+        case data.includes("app.factech" || "test.isocietymanager.com"):
           const lastSegment = data.split("/").pop(); // "290=LC=89a0fe33-b08a-4d71-8062-5a282bdacf8b"
 
           // Split using '='
           const [siteId, type, uuid] = lastSegment.split("=");
-          console.log(siteId,type,uuid)
         if(siteId == societyId){
           await AsyncStorage.setItem("uuid", uuid);
           await AsyncStorage.setItem("type", type);

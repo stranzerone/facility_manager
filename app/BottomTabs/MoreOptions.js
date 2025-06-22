@@ -197,7 +197,6 @@ useEffect(() => {
               alignItems: "center", 
               justifyContent: "center",
             }}
-            onPress={() => console.log("Settings")}
           >
             <Feather name="settings" size={20} color={colors.primary} />
           </Pressable>
@@ -501,7 +500,6 @@ useEffect(() => {
                       borderWidth: 1,
                       borderColor: colors.border,
                     }}
-                    onPress={() => console.log("Refresh asset", asset.id)}
                   >
                     <Feather name="refresh-cw" size={16} color={colors.accent} />
                   </Pressable>

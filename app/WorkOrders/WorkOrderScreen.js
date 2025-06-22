@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -11,14 +11,13 @@ import {
 import Icon from 'react-native-vector-icons/FontAwesome';
 import FilterOptions from './WorkOrderFilter';
 import WorkOrderCard from './WorkOrderCards';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import Loader from '../LoadingScreen/AnimatedLoader';
 import { fetchAllUsers } from '../../utils/Slices/UsersSlice';
 import { fetchAllTeams } from '../../utils/Slices/TeamSlice';
 import { useDispatch, useSelector } from 'react-redux';
 import { usePermissions } from '../GlobalVariables/PermissionsContext';
 import { workOrderService } from "../../services/apis/workorderApis";
-
 // Colors based on nightMode
 const getColors = (nightMode) => ({
   header: nightMode ? '#2D3748' : '#074B7C',
@@ -55,7 +54,6 @@ const WorkOrderPage = ({ route }) => {
   const teams = useSelector((state) => state.teams.data);
   const { ppmAsstPermissions, ppmWorkorder, nightMode } = usePermissions();
   const colors = getColors(nightMode);
-
   useEffect(() => {
     if (!users?.length || !teams?.length) {
       dispatch(fetchAllTeams());
@@ -78,9 +76,7 @@ const WorkOrderPage = ({ route }) => {
             if (wotype === "AS") {
               const bd = await workOrderService.getAssetWorkOrder(qrValue, selectedFilter, true, page);
               const wo = await workOrderService.getAssetWorkOrder(qrValue, selectedFilter, false, page);
-              console.log(wo,'this are bd')
               const merged = [...wo.data, ...bd.data];
-              console.log(merged,'this is merged data')
               
               if (isLoadMore) {
                 setWorkOrders(prev => [...prev, ...merged]);
@@ -93,7 +89,6 @@ const WorkOrderPage = ({ route }) => {
             } else {
               const bd = await workOrderService.getLocationWorkOrder(qrValue, selectedFilter, true, page);
               const wo = await workOrderService.getLocationWorkOrder(qrValue, selectedFilter, false, page);
-              console.log(wo,'this response for wo in woscreen')
               const merged = [...wo.data, ...bd.data];
               
               if (isLoadMore) {
@@ -119,9 +114,9 @@ const WorkOrderPage = ({ route }) => {
         }
       } else {
         if (screenType === "OW") {
+          console.log(selectedFilter,'this is selected filter')
           response = await workOrderService.getAllWorkOrders(selectedFilter, flag, page);
-          console.log("workorders",response)
-          
+          console.log(response,'this is response')
           if (isLoadMore) {
             setWorkOrders(prev => [...prev, ...(response.data || [])]);
           } else {
@@ -141,15 +136,15 @@ const WorkOrderPage = ({ route }) => {
     }
   };
 
-  console.log(workOrders,'this are workorders')
 
-  useEffect(() => {
-    if (type) {
-      setPageNo(0);
-      setHasMoreData(true);
-      fetchData(0, false);
-    }
-  }, [type, selectedFilter, flag, qrValue]);
+useFocusEffect(
+  useCallback(() => {
+    // Refresh when returning to this screen
+    setPageNo(0);
+    setHasMoreData(true);
+    fetchData(0, false);
+  }, [qrValue,wotype,flag,selectedFilter])
+);
 
   const permissionToAdd =
     ppmWorkorder.some((p) => p.includes('C')) &&

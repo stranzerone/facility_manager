@@ -11,6 +11,7 @@ import { useDispatch } from 'react-redux';
 import { fetchAllTeams } from '../../utils/Slices/TeamSlice';
 import { Linking } from 'react-native';
 import { RegisterAppOneSignal } from '../../service/OneSignalNotifications/RegisterOnesignal'
+import { workOrderService } from '../../services/apis/workorderApis';
 
 const NewLoginScreen = () => {
   const [email, setEmail] = useState('');
@@ -47,7 +48,7 @@ const NewLoginScreen = () => {
 
   const register = async () => {
     try {
-      await RegisterAppOneSignal();
+      await workOrderService.appRegisterOneSignal();
     } catch (error) {
       console.error("Error registering OneSignal:", error);
     }

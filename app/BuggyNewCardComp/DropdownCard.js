@@ -27,7 +27,6 @@ const DropdownCard = ({ item, onUpdate, editable }) => {
   const iconColor = nightMode ? "#A1A1AA" : "#1F2937";
 
   const handleChange = async (value) => {
-    console.log(value,'this is value that is selected')
     setSelectedValue(value);
 
     try {

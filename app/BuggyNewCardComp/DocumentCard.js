@@ -17,6 +17,7 @@ import useConvertToSystemTime from "../TimeConvertot/ConvertUtcToIst";
 import { workOrderService } from "../../services/apis/workorderApis";
 import { usePermissions } from "../GlobalVariables/PermissionsContext";
 import CheckboxCardHeader from "./TopRow";
+import NetInfo from "@react-native-community/netinfo";
 
 const DocumentCard = ({ item, onUpdate, editable }) => {
   const { nightMode } = usePermissions();
@@ -38,6 +39,7 @@ const DocumentCard = ({ item, onUpdate, editable }) => {
   const iconColor = nightMode ? "#A1A1AA" : "#1F2937";
 
   const handleUpload = async () => {
+    
     try {
       const result = await DocumentPicker.getDocumentAsync({
         type: "*/*",
@@ -50,32 +52,36 @@ const DocumentCard = ({ item, onUpdate, editable }) => {
           Alert.alert("Error", "The selected file is too large. Please upload a file smaller than 10MB.");
           return;
         }
+  
+        const formData = new FormData()
+         formData.append("name",result.assets?.[0]?.name)
+         formData.append("type",result.assets?.[0]?.mimeType)
+         formData.append("file",result.assets?.[0]?.uri)
 
-        const fileData = {
-          uri: result.assets?.[0]?.uri,
-          fileName: result.assets?.[0]?.name,
-          mimeType: result.assets?.[0]?.mimeType,
-        };
+        const paylod = {
+          id:item.id,
+          result:result.assets?.[0]?.uri,
+          WoUuId: item.ref_uuid,
+
+         }
+    const netState = await NetInfo.fetch();
+    const isConnected = netState.isConnected;
+
+
 
         setSelectedFile(result);
         setIsUploading(true);
-
-        const uploadResponse = await workOrderService.addPdfToServer(fileData, item.id, item.ref_uuid);
-
-        if (uploadResponse) {
-          const payload = {
-            id: item.id,
-            result: uploadResponse.data.url,
-            WoUuId: item.ref_uuid,
-            image: false,
-          };
-          await workOrderService.updateInstruction(payload);
-          onUpdate();
-          setUploadSuccess(true);
-        }
+  const response = await  workOrderService.addPdfToServerInstruction(result.assets?.[0]?.uri,paylod,isConnected,true)
+        // const uploadResponse = await workOrderService.addPdfToServer(fileData, item.id, item.ref_uuid);
+       if (response && response.status === "success") {
+             setSelectedFile(result);
+            if (onUpdate) {
+              onUpdate(item.id,result.assets?.[0]?.uri );
+            }
+          }
       }
     } catch (error) {
-      Alert.alert("Error", "An error occurred while selecting the document.");
+      console.log(error,'this is error')
     } finally {
       setIsUploading(false);
     }
@@ -99,11 +105,13 @@ const DocumentCard = ({ item, onUpdate, editable }) => {
     }
   };
 
-  const extractFileNameFromNewBill = (url) => {
-    const fileName = decodeURIComponent(url.split("/").pop());
-    const nameOfFile = fileName?.split("_")[2];
-    return nameOfFile || "Unnamed PDF";
-  };
+const extractFileNameFromNewBill = (url) => {
+  const fileName = decodeURIComponent(url.split("/").pop() || "");
+  const match = fileName.match(/^(.*?\.pdf)/i); // match up to ".pdf"
+  return match ? match[1] : fileName || "Unnamed PDF";
+};
+
+
 
   return (
     <View

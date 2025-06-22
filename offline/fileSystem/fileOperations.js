@@ -55,7 +55,6 @@ export const saveImage = async (uri, filename) => {
 
 export const addToQueue = async (name, data) => {
   const QUEUE_FILE_PATH = `${FileSystem.documentDirectory}${name}.json`;
-console.log("this is data for queue",data)
   try {
     const existing = await FileSystem.readAsStringAsync(QUEUE_FILE_PATH).catch(() => '[]');
     const queue = JSON.parse(existing);
@@ -68,20 +67,18 @@ console.log("this is data for queue",data)
 };
 
 
-export const removeFromQueue = async (name, data) => {
+export const removeFromQueue = async (name, id) => {
   const QUEUE_FILE_PATH = `${FileSystem.documentDirectory}${name}.json`;
 
   try {
     const existing = await FileSystem.readAsStringAsync(QUEUE_FILE_PATH).catch(() => '[]');
     let queue = JSON.parse(existing);
 
-    // Filter out the matching item (based on URL and payload)
-    const filteredQueue = queue.filter(
-      item => !(item.url === data.url && JSON.stringify(item.payload) === JSON.stringify(data.payload))
-    );
+    // Filter out item by id
+    const filteredQueue = queue.filter(item => item.id !== id);
 
     await FileSystem.writeAsStringAsync(QUEUE_FILE_PATH, JSON.stringify(filteredQueue));
-    console.log("🗑️ Removed item from queue:", data.url);
+    console.log("🗑️ Removed item from queue:", id);
   } catch (error) {
     console.log("❌ Error removing from queue:", error);
   }
@@ -101,7 +98,6 @@ export const getQueueLength = async (name) => {
 };
 
 export const getQueue = async (name) => {
-  console.log("getting queue for sync")
   const QUEUE_FILE_PATH = `${FileSystem.documentDirectory}${name}.json`;
 
   try {
@@ -114,11 +110,9 @@ export const getQueue = async (name) => {
 
 export const clearQueue = async (name) => {
   const QUEUE_FILE_PATH = `${FileSystem.documentDirectory}${name}.json`;
-  console.log(QUEUE_FILE_PATH,'this queue is cleared')
 
   try {
     await FileSystem.writeAsStringAsync(QUEUE_FILE_PATH, JSON.stringify([]));
-    console.log(QUEUE_FILE_PATH,'this is clared file')
   } catch (error) {
     console.log("❌ Error clearing queue", error);
   }
@@ -148,11 +142,18 @@ export const deleteFile = async (prefix = 'ch_') => {
 
 
 
-export const updateInstructionInFile = async (ref_uuid, id, resultValue,inCache) => {
+export const updateInstructionInFile = async (ref_uuid, id, resultValue, inCache) => {
   const fileName = 'ch_instructions';
   const fileUri = FileSystem.documentDirectory + fileName;
 
   try {
+    // Check if file exists
+    const fileInfo = await FileSystem.getInfoAsync(fileUri);
+    if (!fileInfo.exists) {
+      console.warn(`⚠️ File not found: ${fileUri}`);
+      return;
+    }
+
     // Read and parse the file
     const fileContents = await FileSystem.readAsStringAsync(fileUri);
     const instructionsData = JSON.parse(fileContents);
@@ -185,5 +186,41 @@ export const updateInstructionInFile = async (ref_uuid, id, resultValue,inCache)
     console.log(`✅ Updated instruction id: ${id} for ref_uuid: ${ref_uuid}`);
   } catch (error) {
     console.error('❌ Error updating instruction:', error);
+  }
+};
+
+
+
+export const updateWorkOrderInFile = async (uuid, statusValue) => {
+  const fileName = 'ch_workorders';
+  const fileUri = FileSystem.documentDirectory + fileName;
+
+  try {
+    // Check if file exists
+    const fileInfo = await FileSystem.getInfoAsync(fileUri);
+    if (!fileInfo.exists) {
+      console.warn(`⚠️ File not found: ${fileUri}`);
+      return;
+    }
+
+    // Read and parse the file
+    const fileContents = await FileSystem.readAsStringAsync(fileUri);
+    const workOrdersData = JSON.parse(fileContents);
+
+  console.log(workOrdersData[uuid],'this is workorder to update')
+
+    // Update the status field
+    workOrdersData[uuid].Status = statusValue;
+
+    // Write the updated data back to the file
+    await FileSystem.writeAsStringAsync(
+      fileUri,
+      JSON.stringify(workOrdersData),
+      { encoding: FileSystem.EncodingType.UTF8 }
+    );
+
+    console.log(`✅ Updated status for work order uuid: ${uuid}`);
+  } catch (error) {
+    console.error('❌ Error updating work order:', error);
   }
 };

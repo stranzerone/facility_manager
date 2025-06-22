@@ -9,6 +9,7 @@ export const PermissionsProvider = ({ children }) => {
   const [complaintPermissions, setComplaintPermissions] = useState([]);
   const [instructionPermissions, setInstructionPermissions] = useState([]);
   const [issueRequestPermission, setIssueRequestPermission] = useState([]);
+  const [closeComplaintPermission,setCloseComplaintPermission] = useState([])
   const [ppmWorkorder, setPpmWorkorder] = useState([]);
   const [nightMode, setNightMode] = useState();
   const [complaintFilter, setComplaintFilter] = useState("Open");
@@ -33,6 +34,8 @@ export const PermissionsProvider = ({ children }) => {
         syncStatus,
         syncTime,
         fetchingOffline,
+        closeComplaintPermission,
+        setCloseComplaintPermission,
         setFetchingOffline,
         setSyncTime,
         setSyncStatus,

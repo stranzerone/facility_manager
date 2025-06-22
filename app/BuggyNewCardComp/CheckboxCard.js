@@ -15,7 +15,6 @@ const CheckboxCard = ({ item, onUpdate, editable }) => {
   const updatedTime = useConvertToSystemTime(item?.updated_at);
   const [modalVisible, setModalVisible] = useState(false);
 
-  console.log(item, 'this is item for check')
   const backgroundColor = editable
     ? isChecked
       ? nightMode ? "#254D32" : "#DFF6DD"
@@ -39,7 +38,6 @@ const CheckboxCard = ({ item, onUpdate, editable }) => {
 
     try {
       const response = await workOrderService.updateInstruction(payload);
-      console.log(response, 'this is for update');
       onUpdate();
     } catch (error) {
       console.error("Error updating instruction:", error);

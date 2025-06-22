@@ -1,5 +1,6 @@
 import { ApiCommon } from "./ApiCommon";
 import { Common } from "./Common";
+import {API_URL} from "@env"
 import { Util } from "./Util";
 
 const LoginSrv = {
@@ -19,6 +20,10 @@ const LoginSrv = {
         Common.removeLoggedInUser()
         Common.removeHistory()
         window.location.reload(true);
+    },
+    login:(obj) =>{
+        let ismUrl = API_URL + 'login';
+        return ApiCommon.postReq(ismUrl, obj);
     },
     generateOtp: (obj) => {
         let ismUrl = process.env.REACT_APP_ISM_API_URL + 'generateotp';

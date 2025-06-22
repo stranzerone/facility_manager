@@ -25,7 +25,6 @@ const useDashboardData = () => {
            response = await getOpenWorkOrders();
             }else{
           response = await getOpenWorkOrders();
-          console.log(response,'this is resposne for wo')
             }
           break;
         case "UW":

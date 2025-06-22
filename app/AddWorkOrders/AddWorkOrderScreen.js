@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
   TextInput
 } from 'react-native';
-import { FontAwesome, FontAwesome6, Ionicons, MaterialIcons } from '@expo/vector-icons'; // Added MaterialIcons
+import { FontAwesome, FontAwesome6, Ionicons, MaterialIcons } from '@expo/vector-icons';
 import TypeSelector from './OptionsInputs/AddType';
 import TaskInput from './TextInput/TextInputs';
 import PrioritySelector from './OptionsInputs/PriorityInput';
@@ -53,7 +53,6 @@ const {nightMode}  = usePermissions()
     setBreakdownHours("");
   };
 
-
   const handleSubmit = async() => {
     setButtonLoading(true)
     const workOrderData = {
@@ -76,7 +75,6 @@ const {nightMode}  = usePermissions()
       }
      
     const response =  await workOrderService.createWorkOrder(workOrderData);
-    console.log(response,'this is response for wo')
     if(response.status == "success"){
       setPopupType('success');
       if(workOrderType==="breakdown"){
@@ -139,8 +137,10 @@ const {nightMode}  = usePermissions()
     setOpen(false)
   };
 
+  const styles = getStyles(nightMode);
+
   return (
-    <SafeAreaView  style={styles.screenContainer} >
+    <SafeAreaView style={styles.screenContainer}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'height' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
@@ -161,7 +161,7 @@ const {nightMode}  = usePermissions()
                 style={styles.dropdownButton}
               >
                 <Text style={styles.dropdownButtonText}>{workOrderType || "Select Type"}</Text>
-                <FontAwesome name={dropdownOpen ? "chevron-up" : "chevron-down"} size={16} color="gray" />
+                <FontAwesome name={dropdownOpen ? "chevron-up" : "chevron-down"} size={16} color={nightMode ? "#9CA3AF" : "gray"} />
               </TouchableOpacity>
 
               {dropdownOpen && (
@@ -185,23 +185,22 @@ const {nightMode}  = usePermissions()
 
             {/* Search Input with Search & Clear Icons */}
             <View style={[styles.searchContainer, { zIndex: dropdownOpen ? -1 : 1 }]}>
-              <Ionicons name="search" size={14} color="gray" style={styles.searchIcon} />
+              <Ionicons name="search" size={14} color="white" style={styles.searchIcon} />
               <TextInput
                 style={styles.input}
                 placeholder="Search for an asset..."
-                value={searchQuery }
+                placeholderTextColor={nightMode ? "#9CA3AF" : "#6B7280"}
+                value={searchQuery}
                 onChangeText={handleSearchAssets}
               />
               {searchQuery.length > 0 && (
                 <TouchableOpacity onPress={clearSearch} style={styles.clearIcon}>
-                  <Ionicons name="close-circle" size={22} color="gray" />
+                  <Ionicons name="close-circle" size={22} color={nightMode ? "#9CA3AF" : "gray"} />
                 </TouchableOpacity>
               )}
             </View>
 
             {loading && <ActivityIndicator size="small" color="#074B7C" />}
-            
-      
             
             {/* Asset List with Icons */}
             {optionsOpen && (
@@ -221,7 +220,7 @@ const {nightMode}  = usePermissions()
               </View>
             )}
 
-      {selectedAsset && (
+            {selectedAsset && (
               <View style={styles.selectedAssetContainer}>
                 <MaterialIcons name="check-circle" size={22} color="#155B74" />
                 <Text style={styles.selectedAssetText}>{selectedAsset.Name}</Text>
@@ -237,7 +236,7 @@ const {nightMode}  = usePermissions()
                   </Text>
                 </View>    
               </View>
-              <View  style={styles.inputContainer}>
+              <View style={styles.inputContainer}>
                 <PrioritySelector onPrioritySelect={setPriority} />
                 <View style={styles.mandatoryContainer}>
                   <Text style={styles.mandatoryText}>
@@ -258,14 +257,15 @@ const {nightMode}  = usePermissions()
             </View>
 
             <View style={styles.buttonContainer}>
-            { buttonLoading ?    
-            <View style={styles.button}>
-      <Text style={styles.buttonText}>Creating...</Text>
-
-           </View>
-            : <TouchableOpacity style={styles.button} onPress={handleSubmit}>
-                <Text style={styles.buttonText}>Create {workOrderType}</Text>
-              </TouchableOpacity>}
+              {buttonLoading ? (
+                <View style={styles.button}>
+                  <Text style={styles.buttonText}>Creating...</Text>
+                </View>
+              ) : (
+                <TouchableOpacity style={styles.button} onPress={handleSubmit}>
+                  <Text style={styles.buttonText}>Create {workOrderType}</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
         </ScrollView>
@@ -282,23 +282,23 @@ const {nightMode}  = usePermissions()
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (nightMode) => StyleSheet.create({
   // Dropdown styles
   dropdownContainer: {
     marginBottom: 16,
     position: 'relative',
   },
   dropdownLabel: {
-    color: '#374151',
+    color: nightMode ? '#E5E5E5' : '#374151',
     fontSize: 14,
     fontWeight: 'bold',
     marginBottom: 8,
   },
   dropdownButton: {
     flexDirection: 'row',
-    backgroundColor: 'white',
+    backgroundColor: nightMode ? '#374151' : 'white',
     borderWidth: 1,
-    borderColor: '#9CA3AF',
+    borderColor: nightMode ? '#4B5563' : '#9CA3AF',
     borderRadius: 6,
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -306,7 +306,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   dropdownButtonText: {
-    color: '#374151',
+    color: nightMode ? '#E5E5E5' : '#374151',
     fontSize: 16,
   },
   dropdownMenu: {
@@ -314,9 +314,9 @@ const styles = StyleSheet.create({
     top: 70,
     left: 0,
     right: 0,
-    backgroundColor: 'white',
+    backgroundColor: nightMode ? '#374151' : 'white',
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: nightMode ? '#4B5563' : '#D1D5DB',
     borderRadius: 6,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -331,7 +331,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#D1D5DB',
+    borderBottomColor: nightMode ? '#4B5563' : '#D1D5DB',
   },
   dropdownDot: {
     backgroundColor: '#3B82F6',
@@ -341,7 +341,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   dropdownItemText: {
-    color: 'black',
+    color: nightMode ? '#E5E5E5' : 'black',
     fontWeight: 'bold',
     fontSize: 16,
   },
@@ -360,7 +360,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#074B7C',
     borderRadius: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: nightMode ? '#374151' : '#FFFFFF',
     maxHeight: 250,
   },
   assetScrollView: {
@@ -368,39 +368,39 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     paddingVertical: 4,
   },
-  // Existing styles remain unchanged...
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: "flex-start",
     height: 50,
-    textAlign:'center',
-    width:"97%",
+    textAlign: 'center',
+    width: "97%",
     borderWidth: 1,
     borderRadius: 12,
     borderColor: "#074B7C",
+    backgroundColor: nightMode ? '#374151' : '#FFFFFF',
     paddingHorizontal: 10,
     marginVertical: 1,
   },
   searchIcon: {
-    backgroundColor:"#074B7C",
-    padding:6,
-    color:"white",
-    borderRadius:10,
+    backgroundColor: "#074B7C",
+    padding: 6,
+    color: "white",
+    borderRadius: 10,
     marginRight: 10,
   },
   assetCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap:4,
-    justifyContent:"flex-start",
+    gap: 4,
+    justifyContent: "flex-start",
     paddingVertical: 14,
     paddingHorizontal: 16,
     marginVertical: 2,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: "#074B7C",
-    backgroundColor: '#FFF',
+    backgroundColor: nightMode ? '#4B5563' : '#FFF',
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
@@ -410,8 +410,8 @@ const styles = StyleSheet.create({
   assetText: {
     fontSize: 17,
     fontWeight: '500',
-    width:"90%",
-    color: '#2C3E50',
+    width: "90%",
+    color: nightMode ? '#E5E5E5' : '#2C3E50',
     marginLeft: 0,
   },
   selectedAssetContainer: {
@@ -420,7 +420,7 @@ const styles = StyleSheet.create({
     marginVertical: 12,
     paddingVertical: 12,
     paddingHorizontal: 16,
-    backgroundColor: '#D1ECF1',
+    backgroundColor: nightMode ? '#1F2937' : '#D1ECF1',
     borderRadius: 10,
     borderWidth: 1,
     borderColor: '#17A2B8',
@@ -428,14 +428,13 @@ const styles = StyleSheet.create({
   selectedAssetText: {
     fontSize: 17,
     fontWeight: 'bold',
-    color: '#155B74',
-    marginLeft: 10, 
+    color: nightMode ? '#60A5FA' : '#155B74',
+    marginLeft: 10,
   },
-
   screenContainer: {
     flex: 1,
     width: '100%',
-    backgroundColor:  '#F8F9FA',
+    backgroundColor: nightMode ? '#1F2937' : '#F8F9FA',
     paddingHorizontal: 20,
   },
   scrollContainer: {
@@ -444,15 +443,15 @@ const styles = StyleSheet.create({
   formContainer: {
     marginBottom: 20,
   },
-
   input: {
     flex: 1,
     width: '100%',
-    marginTop:5,
-    padding:0,
+    marginTop: 5,
+    padding: 0,
     paddingVertical: 4,
-    paddingHorizontal:10,
+    paddingHorizontal: 10,
     fontSize: 16,
+    color: nightMode ? '#E5E5E5' : '#000000',
   },
   clearIcon: {
     marginLeft: 10,
@@ -463,11 +462,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 0,
     marginBottom: 25,
     paddingTop: 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: nightMode ? '#374151' : '#FFFFFF',
   },
   rowContainer: {
     flexDirection: 'row',
-    marginTop:15,
+    marginTop: 15,
     justifyContent: 'space-between',
     marginBottom: 5,
   },
@@ -479,7 +478,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   button: {
-    backgroundColor: '#074B7C',
+    backgroundColor: nightMode ? '#1E40AF' : '#074B7C',
     paddingVertical: 16,
     fontSize: 22,
     paddingHorizontal: 30,

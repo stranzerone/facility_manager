@@ -121,23 +121,26 @@ export const InventoryServices = {
 
         const url = InventoryServices.appendParamsInUrl(`${API_URL}/v3/approvals`, params);
         const headers = await Util.getCommonAuth()
-        return await ApiCommon.getReq(url, headers);
+        const response  = await ApiCommon.getReq(url, headers);
+        console.log(response,'this is approval list')
+        return response
     },
 
     requestApproval: async (mpayload) => {
         const societyInfo = await AsyncStorage.getItem('societyInfo');
-
+       console.log(mpayload)
         const site_uuid = JSON.parse(societyInfo);
-        mpayload.site_uuid = site_uuid;
-
+        const user = await Common.getLoggedInUser()
+         console.log(user,'this is user')
         // Construct the dynamic payload (mpayload)
         const payload = {
             ...mpayload.issue,  // Copy all fields from issue
             Status: "PENDING",  // Override status with 'PENDING'
-            site_uuid: payload.site_uuid,  // Add site_uuid
-            line_items: payload.item,  // Directly pass the item array
-            updated_by: userId
+            site_uuid:  site_uuid,  // Add site_uuid
+            line_items: mpayload.item,  // Directly pass the item array
+            updated_by: user.data.id
         };
+        console.log(payload,'this is paylod for approve')
         const url = `${API_URL}/v3/stock/request`;
         const headers = await Util.getCommonAuth()
         const response = await ApiCommon.putReq(url, payload, headers);
@@ -160,6 +163,7 @@ export const InventoryServices = {
             line_items: itemList,
             user_id: user.data.id
         }
+        console.log(payload,'this is paylod for add item')
         const url = `${API_URL}/v3/stock/request`;
         const headers = await Util.getCommonAuth()
 

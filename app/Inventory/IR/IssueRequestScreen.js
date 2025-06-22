@@ -24,11 +24,23 @@ const IRItemsScreen = ({ route }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState("ALL");
   const [showOptionsModal, setShowOptionsModal] = useState(false);
-
-  const { issueRequestPermission } = usePermissions();
+  
+  const { nightMode, issueRequestPermission } = usePermissions();
   const permissionToAdd = issueRequestPermission.some((permission) =>
     permission.includes("C")
   );
+
+  // Theme colors based on night mode
+  const themeStyles = {
+    background: nightMode ? '#1F2937' : '#F1F5F9',
+    cardBackground: nightMode ? '#374151' : '#FFFFFF',
+    textPrimary: nightMode ? '#F9FAFB' : '#000000',
+    textSecondary: nightMode ? '#D1D5DB' : '#6B7280',
+    textMuted: nightMode ? '#9CA3AF' : '#94A3B8',
+    border: nightMode ? '#4B5563' : '#E5E7EB',
+    accent: '#074B7C',
+    shadow: nightMode ? '#000000' : '#00000010',
+  };
 
   const filterByStatus = (items, status) => {
     if (status === "ALL") {
@@ -82,26 +94,41 @@ const IRItemsScreen = ({ route }) => {
   ];
 
   const renderHeader = () => (
-    <View className="flex-row items-center justify-between mb-4 pt-1 bg-[#F1F5F9] z-10">
+    <View 
+      className="flex-row items-center justify-between mb-4 pt-1 z-10 p-2"
+      style={{ backgroundColor: themeStyles.background }}
+    >
       <View className="flex-row gap-2 items-center justify-center">
         <TouchableOpacity
           onPress={() => navigation.goBack()}
-          className="p-2 rounded-full bg-white shadow-sm"
+          className="p-2 rounded-full shadow-sm"
+          style={{ backgroundColor: themeStyles.cardBackground }}
         >
-          <FontAwesome name="arrow-left" size={18} color="#074B7C" />
+          <FontAwesome name="arrow-left" size={18} color={themeStyles.accent} />
         </TouchableOpacity>
-        <Text className="text-black text-xl font-semibold">IR List</Text>
+        <Text 
+          className="text-xl font-semibold"
+          style={{ color: themeStyles.textPrimary }}
+        >
+          IR List
+        </Text>
       </View>
 
-      <View className="flex-row items-center justify-center bg-white rounded-full p-2 mt-1">
+      <View 
+        className="flex-row items-center justify-center rounded-full p-2 mt-1"
+        style={{ backgroundColor: themeStyles.cardBackground }}
+      >
         <TouchableOpacity
           onPress={() => setShowOptionsModal(true)}
           className="flex-row items-center justify-center"
         >
-          <Text className="text-black text-md font-semibold mr-1">
+          <Text 
+            className="text-md font-semibold mr-1"
+            style={{ color: themeStyles.textPrimary }}
+          >
             {selectedStatus}
           </Text>
-          <FontAwesome name="filter" size={18} color="#074B7C" />
+          <FontAwesome name="filter" size={18} color={themeStyles.accent} />
         </TouchableOpacity>
       </View>
     </View>
@@ -112,7 +139,10 @@ const IRItemsScreen = ({ route }) => {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-[#F1F5F9] px-4 pb-32">
+    <SafeAreaView 
+      className="flex-1 px-4 pb-3"
+      style={{ backgroundColor: themeStyles.background }}
+    >
       {loading ? (
        <Loader />
       ) : (
@@ -120,21 +150,36 @@ const IRItemsScreen = ({ route }) => {
           data={filteredItems}
           keyExtractor={(item, index) => index.toString()}
           renderItem={({ item }) =>
-            item && item.issue ? <IRCard item={item} uuid={uuid} /> : null
+            item && item.issue ? <IRCard item={item} uuid={uuid} nightMode={nightMode} /> : null
           }
           ListHeaderComponent={renderHeader}
           stickyHeaderIndices={[0]}
           contentContainerStyle={{ paddingBottom: 120, flexGrow: 1 }}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            <RefreshControl 
+              refreshing={refreshing} 
+              onRefresh={onRefresh}
+              tintColor={themeStyles.textSecondary}
+              colors={[themeStyles.accent]}
+            />
           }
           ListEmptyComponent={() => (
             <View className="flex-1 justify-center items-center mt-16 px-6">
-              <FontAwesome name="info-circle" size={50} color="#94A3B8" />
-              <Text className="text-gray-500 text-lg mt-4 font-medium text-center">
+              <FontAwesome 
+                name="info-circle" 
+                size={50} 
+                color={themeStyles.textMuted} 
+              />
+              <Text 
+                className="text-lg mt-4 font-medium text-center"
+                style={{ color: themeStyles.textSecondary }}
+              >
                 No Issue Requests Found
               </Text>
-              <Text className="text-gray-400 text-sm text-center mt-1">
+              <Text 
+                className="text-sm text-center mt-1"
+                style={{ color: themeStyles.textSecondary }}
+              >
                 Pull down to refresh or try a different filter.
               </Text>
             </View>
@@ -143,11 +188,15 @@ const IRItemsScreen = ({ route }) => {
       )}
 
       {/* Floating Button */}
-      <View className="absolute bottom-16 left-4 right-4">
+      <View className="absolute bottom-1 left-4 right-4">
         <TouchableOpacity
           onPress={handleCreateIR}
           disabled={!permissionToAdd}
-          className="bg-[#074B7C] py-4 rounded-2xl flex-row items-center justify-center shadow-lg"
+          className="py-4 rounded-2xl flex-row items-center justify-center shadow-lg"
+          style={{ 
+            backgroundColor: permissionToAdd ? themeStyles.accent : (nightMode ? '#4B5563' : '#9CA3AF'),
+            opacity: permissionToAdd ? 1 : 0.6
+          }}
         >
           <FontAwesome name="plus" size={16} color="#fff" />
           <Text className="text-white font-semibold ml-2">Create New IR</Text>
@@ -160,6 +209,7 @@ const IRItemsScreen = ({ route }) => {
         options={statusOptions}
         onSelect={handleFilterChange}
         onClose={() => setShowOptionsModal(false)}
+        nightMode={nightMode}
       />
     </SafeAreaView>
   );

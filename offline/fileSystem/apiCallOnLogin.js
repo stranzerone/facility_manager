@@ -63,15 +63,11 @@ export const apiCallOnLogin = async () => {
       if (!parsedOpenData.data || !Array.isArray(parsedOpenData.data)) {
         throw new Error("Invalid or missing openWorkorders data");
       }
-      console.log("fetching instructions for work orders...")
-    
       for (const item of parsedOpenData.data) {
         const wo = item.wo;
-        console.log(wo,'this is the wo')
         if (wo?.uuid) {
           try {
             const instructionResponse = await workOrderService.getInstructionsForWo( {ref_uuid:wo.uuid,ref_type:"WO"});
-            console.log(instructionResponse,'this is the instruction response')
             await writeToFile(`woInstruction-${wo.uuid}.json`, instructionResponse);
           } catch (innerErr) {
             console.log(`❌ Error fetching instruction for WO ${wo.uuid}:`, innerErr.message);
@@ -163,7 +159,6 @@ export const apiCallOnLogin = async () => {
     await fetchInstructionsForWorkOrders();
     await fetchInstructionsComments();
     await fetchInstructionsDetails();
-    console.log("✅ All data synced and stored.");
 
   } catch (e) {
     console.log("❌ Error in apiCallOnLogin:", e.message);

@@ -16,13 +16,15 @@ import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { useNavigation } from '@react-navigation/native';
+import { usePermissions } from '../GlobalVariables/PermissionsContext';
 
 const CommentInput = ({ value, onChangeText, onSubmit, isPosting }) => {
   const [imagePreview, setImagePreview] = useState(null);
   const [imageBase64, setImageBase64] = useState(null);
   const [isPreviewVisible, setIsPreviewVisible] = useState(false);
+  const { nightMode } = usePermissions();
+  const navigation = useNavigation();
 
-  const navigation = useNavigation()
   // Function to compress and convert the image to Base64
   const compressAndConvertToBase64 = async (uri) => {
     try {
@@ -32,7 +34,6 @@ const CommentInput = ({ value, onChangeText, onSubmit, isPosting }) => {
         { compress: 0.5, format: ImageManipulator.SaveFormat.JPEG } // Compress quality
       );
 
-   
       const base64 = await FileSystem.readAsStringAsync(manipulatedImage.uri, {
         encoding: FileSystem.EncodingType.Base64,
       });
@@ -80,7 +81,6 @@ const CommentInput = ({ value, onChangeText, onSubmit, isPosting }) => {
       },
     });
   };
-  
 
   // Handle submitting the comment
   const handleSubmit = () => {
@@ -88,31 +88,30 @@ const CommentInput = ({ value, onChangeText, onSubmit, isPosting }) => {
       Alert.alert('Error', 'Please add a comment or attach an image.');
       return;
     }
-  
+
     const dataToSubmit = {
       remarks: value,
       file: imageBase64,
     };
-  
+
     onSubmit(dataToSubmit);
-  
+
     // Clear input and image data
     onChangeText(''); // Clear the text input
     setImagePreview(null); // Clear the image preview
     setImageBase64(null); // Clear the base64 data
   };
-  
 
   return (
     <View
       style={{
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#f3f4f6',
+        backgroundColor: nightMode ? '#374151' : '#f3f4f6',
         padding: 8,
         borderRadius: 8,
         borderWidth: 1,
-        borderColor: '#d1d5db',
+        borderColor: nightMode ? '#6b7280' : '#d1d5db',
       }}
     >
       {/* Image Preview */}
@@ -127,6 +126,7 @@ const CommentInput = ({ value, onChangeText, onSubmit, isPosting }) => {
               width: 48,
               height: 48,
               borderRadius: 8,
+              opacity: nightMode ? 0.9 : 1,
             }}
             resizeMode="cover"
           />
@@ -138,13 +138,15 @@ const CommentInput = ({ value, onChangeText, onSubmit, isPosting }) => {
         style={{
           flex: 1,
           borderWidth: 1,
-          borderColor: '#d1d5db',
+          borderColor: nightMode ? '#6b7280' : '#d1d5db',
           borderRadius: 8,
           paddingHorizontal: 12,
           paddingVertical: 8,
-          color: '#374151',
+          color: nightMode ? '#f9fafb' : '#374151',
+          backgroundColor: nightMode ? '#4b5563' : '#ffffff',
         }}
         placeholder="Add a new comment"
+        placeholderTextColor={nightMode ? '#9ca3af' : '#6b7280'}
         value={value}
         onChangeText={onChangeText}
       />
@@ -153,21 +155,32 @@ const CommentInput = ({ value, onChangeText, onSubmit, isPosting }) => {
       <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 8 }}>
         {/* Attach Image Icon */}
         <TouchableOpacity onPress={handleImageAttachment} style={{ marginRight: 8 }}>
-          <FontAwesome name="paperclip" size={24} color="#1996D3" />
+          <FontAwesome 
+            name="paperclip" 
+            size={24} 
+            color={nightMode ? '#60a5fa' : '#1996D3'} 
+          />
         </TouchableOpacity>
 
         {/* Capture Image Icon */}
         <TouchableOpacity onPress={handleCaptureImage} style={{ marginRight: 8 }}>
-          <FontAwesome name="camera" size={24} color="#1996D3" />
+          <FontAwesome 
+            name="camera" 
+            size={24} 
+            color={nightMode ? '#60a5fa' : '#1996D3'} 
+          />
         </TouchableOpacity>
 
         {/* Submit Button */}
         {isPosting ? (
-          <ActivityIndicator size="small" color="#1996D3" />
+          <ActivityIndicator 
+            size="small" 
+            color={nightMode ? '#60a5fa' : '#1996D3'} 
+          />
         ) : (
           <TouchableOpacity
             style={{
-              backgroundColor: '#3b82f6',
+              backgroundColor: nightMode ? '#3730a3' : '#3b82f6',
               paddingHorizontal: 16,
               paddingVertical: 8,
               borderRadius: 8,
@@ -193,7 +206,7 @@ const CommentInput = ({ value, onChangeText, onSubmit, isPosting }) => {
                 flex: 1,
                 justifyContent: 'center',
                 alignItems: 'center',
-                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                backgroundColor: nightMode ? 'rgba(0, 0, 0, 0.8)' : 'rgba(0, 0, 0, 0.5)',
               }}
             >
               <Image

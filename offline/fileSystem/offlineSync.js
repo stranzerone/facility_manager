@@ -19,7 +19,6 @@ export const syncOfflineQueue = async (queueLength,setQueueLength) => {
 
   for (const item of queue) {
     try {
-      console.log(item)
       const response = await fetch(item.url, {
         method: item.method,
         headers,
@@ -27,15 +26,21 @@ export const syncOfflineQueue = async (queueLength,setQueueLength) => {
       });
 
       if (response.ok) {
-        Toast.show({
-          type: 'success',
-          text1: '✅ Sync Successful',
-          text2: `Synced: ${item.url}`,
-          position: 'top',
-          visibilityTime: 3000,
-        });
+
+    if(item.formdata && item.payload){
+      
+   const newResponse = await workOrderService.addPdfToServerInstruction(item.formdata,item.payload,true)
+    }
+
+
+        // Toast.show({
+        //   type: 'success',
+        //   text1: '✅ Sync Successful',
+        //   position: 'top',
+        //   visibilityTime: 3000,
+        // });
         setQueueLength(queueLength --)
-        removeFromQueue("queueData", item); // Remove from queue after successful sync
+        removeFromQueue("queueData", item.id); // Remove from queue after successful sync
       } else {
         console.warn(`⚠️ Sync failed for ${item.url} with status ${response.status}`);
         updatedQueue.push(item); // Add back failed request
@@ -61,13 +66,6 @@ export const syncOfflineQueue = async (queueLength,setQueueLength) => {
   }
 
   // Save updated queue (with only failed requests)
-  if (updatedQueue.length > 0) {
-    // await saveQueue("queueDataSaved", updatedQueue);
-    console.log("⚠️ Some items failed. Queue updated.");
-  } else {
-    // await clearQueue("queueData");
-    console.log("✅ All items synced. Queue cleared.");
-  }
 
 
 };
