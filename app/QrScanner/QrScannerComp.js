@@ -9,12 +9,15 @@ import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import DynamicPopup from "../DynamivPopUps/DynapicPopUpScreen";
 import { usePermissions } from "../GlobalVariables/PermissionsContext";
 import { InventoryServices } from "../../services/apis/InventoryApi";
+import { check, request, PERMISSIONS, RESULTS, openSettings } from 'react-native-permissions';
+import { Platform } from 'react-native';
 
 export default function QrScanner({ screenType = "OW" }) {
   const [scanned, setScanned] = useState(false);
   const [popupVisible, setPopupVisible] = useState(false);
   const [popupMessage, setPopupMessage] = useState("");
   const [popupType, setPopupType] = useState("error");
+const [hasPermission, setHasPermission] = useState(false);
 
   const navigation = useNavigation();
   const { issueRequestPermission } = usePermissions();
@@ -30,6 +33,38 @@ export default function QrScanner({ screenType = "OW" }) {
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
     return uuidRegex.test(str);
   };
+
+  useFocusEffect(
+  useCallback(() => {
+    const checkCameraPermission = async () => {
+      const permissionType =
+        Platform.OS === 'android'
+          ? PERMISSIONS.ANDROID.CAMERA
+          : PERMISSIONS.IOS.CAMERA;
+
+      const result = await check(permissionType);
+      if (result === RESULTS.GRANTED) {
+        setHasPermission(true);
+      } else {
+        const req = await request(permissionType);
+        setHasPermission(req === RESULTS.GRANTED);
+        if (req !== RESULTS.GRANTED) {
+          Alert.alert(
+            'Camera Permission',
+            'Please enable camera permission in settings.',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Open Settings', onPress: () => openSettings() },
+            ]
+          );
+        }
+      }
+    };
+
+    checkCameraPermission();
+    setScanned(false);
+  }, [])
+);
 
   const fetchInvInfo = async (uuid) => {
     try {
@@ -156,15 +191,18 @@ export default function QrScanner({ screenType = "OW" }) {
   
   return (
     <SafeAreaView style={styles.safeArea}>
-      {!scanned && (
- <Camera
- scanBarcode={true}
- style={styles.camera}
- onReadCode={handleBarcodeScanned} // optional
- showFrame={true} // (default false) optional, show frame with transparent layer (qr code or barcode will be read on this area ONLY), start animation for scanner, that stops when a code has been found. Frame always at center of the screen
- laserColor='red' // (default red) optional, color of laser in scanner frame
- frameColor='white' // (default white) optional, color of border of scanner frame
-/>
+     
+{  !scanned && (
+  <Camera
+    scanBarcode={true}
+    style={styles.camera}
+    onReadCode={handleBarcodeScanned}
+    showFrame={true}
+    laserColor="red"
+    frameColor="white"
+  />
+
+
       )}
       <DynamicPopup
         visible={popupVisible}

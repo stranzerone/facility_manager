@@ -20,7 +20,7 @@ import { workOrderService } from "../../services/apis/workorderApis";
 import { usePermissions } from "../GlobalVariables/PermissionsContext";
 import CheckboxCardHeader from "./TopRow";
 
-const FileCard = ({ item, onUpdate, editable }) => {
+const FileCard = ({ item, onUpdate,as, editable,wo }) => {
   const { nightMode } = usePermissions();
   const [capturedImage, setCapturedImage] = useState(item.result || null);
   const [loading, setLoading] = useState(false);
@@ -125,7 +125,7 @@ const FileCard = ({ item, onUpdate, editable }) => {
       className="shadow-sm rounded-lg p-3 mx-2 mb-2"
       style={[styles.inputContainer, { backgroundColor }]}
     >
-      <CheckboxCardHeader item={item} nightMode={nightMode} updatedTime={updatedTime} />
+      <CheckboxCardHeader item={item}  as={as}  wo={wo} nightMode={nightMode} updatedTime={updatedTime} />
 
       <View className="flex-row mb-3">
         <Text className="font-bold text-md mr-2" style={{ color: textColor }}>

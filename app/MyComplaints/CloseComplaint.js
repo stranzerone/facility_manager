@@ -26,7 +26,7 @@ import { complaintService } from '../../services/apis/complaintApis';
 
 
 const ComplaintCloseScreen = ({ route }) => {
-  const { complaint, category, creator } = route.params;
+  const { complaint, category, creator, location } = route.params;
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
   const [isOtpMode, setIsOtpMode] = useState(false);
@@ -38,7 +38,6 @@ const ComplaintCloseScreen = ({ route }) => {
   const { complaintPermissions, nightMode,closeComplaintPermission } = usePermissions();
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [isImageVisible, setIsImageVisible] = useState(false);
-
   // Theme configuration
   const theme = {
     light: {
@@ -381,65 +380,93 @@ const ComplaintCloseScreen = ({ route }) => {
             </View>
 
             {/* Category and Creator Section */}
-            <View style={{ marginBottom: 16 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-                <FontAwesome name="tag" size={16} color={currentTheme.accent} style={{ marginRight: 8 }} />
-                <Text style={[dynamicStyles.textSecondary, { marginRight: 12 }]}>Category:</Text>
-                <View style={[dynamicStyles.badge, dynamicStyles.categoryBadge]}>
-                  <Text style={{ color: 'white', fontWeight: '600', fontSize: 12 }}>
-                    {category?.name}
-                  </Text>
-                </View>
-              </View>
+<View style={{ marginBottom: 16, backgroundColor: nightMode ? '#1f2937' : '#f9fafb', padding: 12, borderRadius: 12 }}>
+  {/* Nature */}
+  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+    <FontAwesome name="tag" size={16} color={currentTheme.accent} style={{ marginRight: 8 }} />
+    <Text style={[dynamicStyles.textSecondary, { marginRight: 12 }]}>Nature:</Text>
+    <View style={{ backgroundColor: '#074B7C1A', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }}>
+        <Text style={{ color: '#1996D3', fontWeight: '600', fontSize: 12 }}>
+        {category?.name || 'N/A'}
+      </Text>
+    </View>
+  </View>
 
-              {creator && (
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <FontAwesome name="user" size={16} color={currentTheme.accent} style={{ marginRight: 8 }} />
-                  <Text style={[dynamicStyles.textSecondary, { marginRight: 12 }]}>Created By:</Text>
-                  <View style={[dynamicStyles.badge, dynamicStyles.userBadge]}>
-                    <Text style={{ color: 'white', fontWeight: '600', fontSize: 12 }}>
-                      {creator}
-                    </Text>
-                  </View>
-                </View>
-              )}
-            </View>
+  {/* Sub Nature */}
+  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+    <FontAwesome name="tag" size={16} color={currentTheme.accent} style={{ marginRight: 8 }} />
+    <Text style={[dynamicStyles.textSecondary, { marginRight: 12 }]}>Sub Nature:</Text>
+    <View style={{ backgroundColor: '#074B7C1A', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }}>
+        <Text style={{ color: '#1996D3', fontWeight: '600', fontSize: 12 }}>
+        {complaint?.sub_category || 'N/A'}
+      </Text>
+    </View>
+  </View>
 
-            {/* Unit Information Section */}
-            {(complaint?.display_unit_no || complaint?.reference_unit_no) && (
-              <View style={{
-                backgroundColor: nightMode ? 'rgba(107, 114, 128, 0.1)' : 'rgba(107, 114, 128, 0.05)',
-                borderRadius: 12,
-                padding: 12,
-                marginBottom: 16,
-              }}>
-                {complaint?.display_unit_no && (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-                    <FontAwesome name="map-marker" size={14} color={currentTheme.textSecondary} style={{ marginRight: 8 }} />
-                    <Text style={[dynamicStyles.textSecondary, { marginRight: 8 }]}>Display Unit:</Text>
-                    <View style={[dynamicStyles.badge, dynamicStyles.unitBadge]}>
-                      <Text style={{ color: currentTheme.textPrimary, fontWeight: '600', fontSize: 11 }}>
-                        {complaint.display_unit_no}
-                      </Text>
-                    </View>
-                  </View>
-                )}
+  {/* Location */}
+{location &&  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+    <FontAwesome name="map-marker" size={16} color={currentTheme.accent} style={{ marginRight: 8 }} />
+    <Text style={[dynamicStyles.textSecondary, { marginRight: 12 }]}>Location:</Text>
+    <View style={{ backgroundColor: '#E0F2FE', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }}>
+      <Text style={{ color: '#0369A1', fontWeight: '600', fontSize: 12 }}>
+        {location?.name || 'N/A'}
+      </Text>
+    </View>
+  </View>}
 
-                {complaint?.reference_unit_no && (
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <FontAwesome name="link" size={14} color={currentTheme.textSecondary} style={{ marginRight: 8 }} />
-                    <Text style={[dynamicStyles.textSecondary, { marginRight: 8 }]}>Ref. Unit:</Text>
-                    <View style={[dynamicStyles.badge, dynamicStyles.unitBadge]}>
-                      <Text style={{ color: currentTheme.textPrimary, fontWeight: '600', fontSize: 11 }}>
-                        {complaint.reference_unit_no ? 
-                          complaint.resource.reference_unit_no.slice(0, 10) + "..." : 'N/A'}
-                      </Text>
-                    </View>
-                  </View>
-                )}
-              </View>
-            )}
+  {/* Created By */}
+  {creator && (
+    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+      <FontAwesome name="user" size={16} color={currentTheme.accent} style={{ marginRight: 8 }} />
+      <Text style={[dynamicStyles.textSecondary, { marginRight: 12 }]}>Created By:</Text>
+      <View style={{ backgroundColor: '#1996D31A', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }}>
+        <Text style={{ color: '#1996D3', fontWeight: '600', fontSize: 12 }}>
+          {creator}
+        </Text>
+      </View>
+    </View>
+  )}
+</View>
 
+{/* Unit Information Section */}
+{(complaint?.display_unit_no || complaint?.reference_unit_no) && (
+  <View
+    style={{
+      backgroundColor: nightMode ? 'rgba(107,114,128,0.1)' : 'rgba(107,114,128,0.05)',
+      borderRadius: 12,
+      padding: 12,
+      marginBottom: 16,
+    }}
+  >
+    {/* Display Unit */}
+    {complaint?.display_unit_no && (
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+        <FontAwesome name="map-marker" size={14} color={currentTheme.textSecondary} style={{ marginRight: 8 }} />
+        <Text style={[dynamicStyles.textSecondary, { marginRight: 8 }]}>Display Unit:</Text>
+        <View style={{ backgroundColor: '#10B9811A', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }}>
+          <Text style={{ color: '#047857', fontWeight: '600', fontSize: 11 }}>
+            {complaint.display_unit_no}
+          </Text>
+        </View>
+      </View>
+    )}
+
+    {/* Reference Unit */}
+    {complaint?.reference_unit_no && (
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <FontAwesome name="link" size={14} color={currentTheme.textSecondary} style={{ marginRight: 8 }} />
+        <Text style={[dynamicStyles.textSecondary, { marginRight: 8 }]}>Ref. Unit:</Text>
+        <View style={{ backgroundColor: '#10B9811A', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }}>
+          <Text style={{ color: '#047857', fontWeight: '600', fontSize: 11 }}>
+            {(complaint.resource?.reference_unit_no || '').length > 12
+              ? complaint.resource.reference_unit_no.slice(0, 12) + '...'
+              : complaint.resource.reference_unit_no || 'N/A'}
+          </Text>
+        </View>
+      </View>
+    )}
+  </View>
+)}
             {/* Description Section */}
             <View style={{
               backgroundColor: nightMode ? 'rgba(148, 163, 184, 0.1)' : 'rgba(148, 163, 184, 0.05)',
@@ -472,14 +499,28 @@ const ComplaintCloseScreen = ({ route }) => {
             </View>
 
             {/* Close Button */}
-            {complaint.status !== 'Closed' && closeComplaintPermission.some((permission) => permission.includes('U')) && (
-              <TouchableOpacity className="p-3 text-center rounded-md" style={{backgroundColor:currentTheme.gradientStart}} onPress={handleCloseComplaint}>
-                
-                  <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 16,textAlign:'center' }}>
-                    Close Complaint
-                  </Text>
-              </TouchableOpacity>
-            )}
+
+<TouchableOpacity
+  disabled={complaint.status === "Closed" || closeComplaintPermission.some((permission) => permission.includes('U'))}
+  className="p-3 text-center rounded-md"
+  style={{
+    backgroundColor: currentTheme.gradientStart,
+    opacity: (complaint.status === "Closed" || closeComplaintPermission.some((permission) => permission.includes('U'))) ? 0.5 : 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  }}
+  onPress={handleCloseComplaint}
+>
+  {(complaint.status === "Closed" || closeComplaintPermission.some((permission) => permission.includes('U'))) && (
+    <FontAwesome name="ban" size={14} color="#fff" style={{ marginRight: 6 }} />
+  )}
+  <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 16, textAlign: 'center' }}>
+    Close Complaint
+  </Text>
+</TouchableOpacity>
+
+          
           </View>
 
           {/* Enhanced Comments Section */}

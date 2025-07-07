@@ -11,7 +11,6 @@ export const CloseComplaintApi = async (data) => {
     const apiToken = parsedUserInfo.data.api_token;
     const societyId = parsedUserInfo.data.societyId;
 
-console.log(data,'this is received as params from prop')
     const params = {
       "user-id": userId,
       "api-token": apiToken,
@@ -29,7 +28,6 @@ console.log(data,'this is received as params from prop')
 
     try {
       const response = await axios.put(`${API_URL2}/staff/updatecomplaint`, data, { params, headers });
-      console.log(response.data,'this is resposne data')
       return response.data;
     } catch (error) {
       console.error('Error fetching data:', error);

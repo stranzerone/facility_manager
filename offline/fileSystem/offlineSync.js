@@ -8,8 +8,9 @@ export const syncOfflineQueue = async (queueLength,setQueueLength) => {
   let queue = await getQueue("queueData"); // [{ url, method, payload }]
   console.log("🔄 Sync started. Queue:", queue);
 
-  if (!queue || !queue.length) {
-    console.log("📭 No items to sync");
+  // if (!queue || !queue.length) {
+    if (true) {
+
     return;
   }
 

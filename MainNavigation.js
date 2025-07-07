@@ -19,6 +19,7 @@ import Toast from 'react-native-toast-message'; // ✅ Required
 import NetInfo from '@react-native-community/netinfo';
 import { syncOfflineQueue } from './offline/fileSystem/offlineSync.js';
 import { Common } from './services/Common.js';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 const Stack = createNativeStackNavigator();
 
 // Wrap navigator to use context inside
@@ -45,20 +46,48 @@ const [isLoggedIn,setIsLoggedIn]  = useState(false)
 
 
 
-  const colorScheme = Appearance.getColorScheme();  // returns 'light' or 'dark'
-  if(colorScheme == "dark"){
-    setNightMode(true)
-  }else{
-    setNightMode(false)
+const setTheme = async () => {
+  try {
+    const currentTheme = await AsyncStorage.getItem('nightMode');
+
+    if (currentTheme === "dark") {
+      setNightMode(true);
+    } else if (currentTheme === "light") {
+      setNightMode(false);
+    } else if (currentTheme === "system") {
+      const colorScheme = Appearance.getColorScheme(); // 'light' or 'dark'
+
+      if (colorScheme === "dark") {
+        setNightMode(true);
+      } else {
+        setNightMode(false);
+      }
+    } else {
+  await AsyncStorage.setItem('nightMode',"system")  
+const colorScheme = Appearance.getColorScheme(); // 'light' or 'dark'
+
+      if (colorScheme === "dark") {
+        setNightMode(true);
+      } else {
+        setNightMode(false);
+      }    }
+  } catch (error) {
+    console.error("Error setting theme:", error);
   }
+};
+
+
   useEffect(() => {
     let syncInProgress = false;
     let previousIsConnected = false;
+    setTheme()
     const unsubscribe = NetInfo.addEventListener(state => {
       const isNowOnline = state.isConnected;
        
       // Only trigger sync if coming online and not already syncing
-      if (isNowOnline && !previousIsConnected && !syncInProgress) {
+      // if (isNowOnline && !previousIsConnected && !syncInProgress) {
+            if (false) {
+
         syncInProgress = true;
         setSyncStatus(true)
  const now = new Date();
@@ -69,7 +98,6 @@ setSyncTime(formattedTime);
           try {
             setSyncStatus(true)
             const user = await Common.getLoggedInUser()
-            console.log(user,'this is user')
             if(!user){
               return
             }

@@ -24,7 +24,6 @@ export const workOrderService = {
     const storedStatuses = storedStatusesString ? JSON.parse(storedStatusesString) : [];
 
     let user = await Common.getLoggedInUser()
-    console.log(user, "user in workorder service")
     const getStatusUuid = (statusName) => {
 
       const status = storedStatuses?.find(item => item.Name === statusName);
@@ -45,9 +44,7 @@ export const workOrderService = {
       "site_uuid":site_uuid,
       "created_by":user.data.id
     }
-    console.log(data, "inside invoice service");
     const url = `${API_URL}/v3/${workOrderData.woType}`;
-    console.log(url, data, "this is on addworkorder service");
     const headers = await Util.getCommonAuth()
 
     return await ApiCommon.postReq(url, data, headers);
@@ -64,7 +61,6 @@ export const workOrderService = {
   },
 
   getAssetWorkOrder:async (qrValue,selectedFilter,breakdown) => {
-    console.log("getting data from common")
      let user = await Common.getLoggedInUser()
      const params = {
       asset_uuid:qrValue,
@@ -79,11 +75,9 @@ export const workOrderService = {
       "api-token": user.data.api_token,
       "user-id": user.data.id
     };
-    console.log(params,'this are for api call')
     const url = workOrderService.appendParamsInUrl(`${API_URL}/v3/workorder/assigned/asset?`, params);
     const headers = await Util.getCommonAuth()
     const response =  await ApiCommon.getReq(url, headers,params);
-    console.log(response,'this is for workorders assets')
     return response
   },
 
@@ -107,11 +101,9 @@ export const workOrderService = {
       str: text, // Empty string to fetch all assets
     };
 
-    console.log(params,'this are the params at start')
     const url = workOrderService.appendParamsInUrl(`${API_URL}/v3/asset/search?`, params);
     const headers = await Util.getCommonAuth()
     const response =  await ApiCommon.getReq(url, headers);
-    console.log(response.data)
     return response
   },
 
@@ -136,9 +128,7 @@ export const workOrderService = {
     const url = `${API_URL}/v3/inst`;
     const headers = await Util.getCommonAuth()
 
-     console.log(payload,'this is paylod for update inst offline')
      const response = await ApiCommon.putReq(url, payload, headers);
-     console.log(response,'this is resposne for updating inst')
      return response
   },
 
@@ -163,7 +153,6 @@ export const workOrderService = {
    const  headers= {
       'Content-Type': 'multipart/form-data', // Correct header for file upload
     }
-    console.log(formData, "this is form data for pdf upload")
   const response =  await ApiCommon.postReq(url,formData, headers);
   // if(response.url){
   //   const payload = {

@@ -8,6 +8,7 @@ import {
   Switch,
   Alert,
   Image,
+  Appearance,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { usePermissions } from "../GlobalVariables/PermissionsContext";
@@ -24,6 +25,8 @@ const MoreScreen = ({ navigation }) => {
   const [animatedItems, setAnimatedItems] = useState({});
   const [notificationSound, setNotificationSound] = useState(true);
   const [user, setUser] = useState({});
+  const [themeMode, setThemeMode] = useState(null); // Initialize as null to prevent premature rendering
+  const [isThemeLoaded, setIsThemeLoaded] = useState(false); // Track loading state
   
   // Dynamic popup states
   const [modalVisible, setModalVisible] = useState(false);
@@ -37,8 +40,7 @@ const MoreScreen = ({ navigation }) => {
   // Get theme and other global states from context
   const {
     nightMode,
-    setNightMode, // Assuming you have this setter in context
-    // Add other context values as needed
+    setNightMode,
   } = usePermissions();
 
   const isDarkMode = nightMode;
@@ -52,7 +54,7 @@ const MoreScreen = ({ navigation }) => {
     phone: "+1 (555) 123-4567",
     department: user?.role,
     joinDate: "January 2023",
-    profileImage: null, // Add actual image URL when available
+    profileImage: null,
     completedJobs: 247,
     rating: 4.8,
   };
@@ -111,6 +113,94 @@ const MoreScreen = ({ navigation }) => {
     setModalVisible(true);
   };
 
+  // Combined useEffect to load theme preference - FIXED
+useEffect(() => {
+  const loadThemePreference = async () => {
+    try {
+      const savedTheme = await AsyncStorage.getItem('nightMode'); // 'light', 'dark', or 'system'
+
+      if (savedTheme) {
+        setThemeMode(savedTheme); // for UI radio check
+
+        if (savedTheme === 'light') {
+          setNightMode(false);
+        } else if (savedTheme === 'dark') {
+          setNightMode(true);
+        } else if (savedTheme === 'system') {
+          const systemColorScheme = Appearance.getColorScheme();
+          setNightMode(systemColorScheme === 'dark');
+        }
+      } else {
+        setThemeMode('light');
+        setNightMode(false);
+      }
+    } catch (error) {
+      console.error('Error loading theme preference:', error);
+      setThemeMode('light');
+      setNightMode(false);
+    } finally {
+      setIsThemeLoaded(true);
+    }
+  };
+  loadThemePreference();
+}, []);
+
+
+  // Function to handle theme selection - FIXED
+ const handleThemeSelection = async (selectedTheme) => {
+  try {
+    setThemeMode(selectedTheme);
+
+    if (selectedTheme === 'system') {
+      await AsyncStorage.setItem('NMSystem', 'true');
+      await AsyncStorage.setItem('nightMode', selectedTheme);
+
+      const colorScheme = Appearance.getColorScheme();
+      setNightMode(colorScheme === 'dark');
+    } else {
+      await AsyncStorage.removeItem('NMSystem');
+      await AsyncStorage.setItem('nightMode', selectedTheme); // ✅ fixed here
+
+      const isDark = selectedTheme === 'dark';
+      setNightMode(isDark);
+    }
+  } catch (error) {
+    console.error('Error setting theme mode:', error);
+  }
+};
+
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const userData = await AsyncStorage.getItem('userInfo');
+        if (userData) {
+          const user = JSON.parse(userData);
+          setUser(user.data);
+        }
+      } catch (error) {
+        console.error('Error fetching user:', error);
+      }
+    };
+
+    fetchUser();
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      await workOrderService.appUnrigester();
+      await AsyncStorage.removeItem('userInfo');
+      await clearQueue('queueData');
+      await deleteFile();
+      dispatch(clearAllTeams());
+      dispatch(clearAllUsers());
+      navigation.replace("Login");
+    } catch (error) {
+      console.error('Error clearing local storage', error);
+      Alert.alert('Error', 'Could not log out. Please try again.');
+    }
+  };
+
   // Menu sections configuration
   const menuSections = [
     {
@@ -122,7 +212,7 @@ const MoreScreen = ({ navigation }) => {
           title: "Edit Profile",
           subtitle: "Update your personal information",
           icon: "edit-3",
-          onPress: showComingSoonPopup, // Changed to show coming soon
+          onPress: showComingSoonPopup,
           showArrow: true,
         },
         {
@@ -130,7 +220,7 @@ const MoreScreen = ({ navigation }) => {
           title: "Change Password",
           subtitle: "Update your security credentials",
           icon: "lock",
-          onPress: showComingSoonPopup, // Changed to show coming soon
+          onPress: showComingSoonPopup,
           showArrow: true,
         },
       ],
@@ -139,15 +229,6 @@ const MoreScreen = ({ navigation }) => {
       id: "preferences",
       title: "Preferences",
       items: [
-        {
-          id: "nightMode",
-          title: "Dark Mode",
-          subtitle: "Switch between light and dark theme",
-          icon: isDarkMode ? "moon" : "sun",
-          onPress: () => setNightMode(!nightMode),
-          showToggle: true,
-          toggleValue: isDarkMode,
-        },
         {
           id: "notifications",
           title: "Notification Sound",
@@ -160,6 +241,39 @@ const MoreScreen = ({ navigation }) => {
       ],
     },
     {
+      id: "theme",
+      title: "Theme",
+      items: [
+        {
+          id: "lightMode",
+          title: "Light Mode",
+          subtitle: "Use light theme",
+          icon: "sun",
+          onPress: () => handleThemeSelection('light'),
+          showRadio: true,
+          radioSelected: themeMode == 'light',
+        },
+        {
+          id: "darkMode",
+          title: "Dark Mode",
+          subtitle: "Use dark theme",
+          icon: "moon",
+          onPress: () => handleThemeSelection('dark'),
+          showRadio: true,
+          radioSelected: themeMode == 'dark',
+        },
+        {
+          id: "systemMode",
+          title: "System Default",
+          subtitle: "Follow system setting",
+          icon: "smartphone",
+          onPress: () => handleThemeSelection('system'),
+          showRadio: true,
+          radioSelected: themeMode == 'system',
+        },
+      ],
+    },
+    {
       id: "support",
       title: "Support & Information",
       items: [
@@ -168,7 +282,7 @@ const MoreScreen = ({ navigation }) => {
           title: "What's New",
           subtitle: "Latest updates and features",
           icon: "zap",
-          onPress: showComingSoonPopup, // Changed to show coming soon
+          onPress: showComingSoonPopup,
           showArrow: true,
           badge: "NEW",
         },
@@ -177,7 +291,7 @@ const MoreScreen = ({ navigation }) => {
           title: "Raise Issue",
           subtitle: "Report a problem or bug",
           icon: "alert-circle",
-          onPress: showComingSoonPopup, // Changed to show coming soon
+          onPress: showComingSoonPopup,
           showArrow: true,
         },
         {
@@ -185,7 +299,7 @@ const MoreScreen = ({ navigation }) => {
           title: "Contact Us",
           subtitle: "Get in touch with support",
           icon: "phone",
-          onPress: showComingSoonPopup, // Changed to show coming soon
+          onPress: showComingSoonPopup,
           showArrow: true,
         },
         {
@@ -193,7 +307,7 @@ const MoreScreen = ({ navigation }) => {
           title: "About Us",
           subtitle: "Learn more about our company",
           icon: "info",
-          onPress: showComingSoonPopup, // Changed to show coming soon
+          onPress: showComingSoonPopup,
           showArrow: true,
         },
       ],
@@ -206,31 +320,6 @@ const MoreScreen = ({ navigation }) => {
 
   const handlePressOut = (itemId) => {
     setAnimatedItems(prev => ({ ...prev, [itemId]: false }));
-  };
-
-  useEffect(() => {
-    const fetchUser = async () => {
-      const userData = await AsyncStorage.getItem('userInfo')
-      const user = JSON.parse(userData)
-      setUser(user.data)
-    }
-
-    fetchUser()
-  }, [])
-
-  const handleLogout = async () => {
-    try {
-      await workOrderService.appUnrigester()
-      await AsyncStorage.removeItem('userInfo');
-      await clearQueue('queueData')
-      await deleteFile()
-      dispatch(clearAllTeams())
-      dispatch(clearAllUsers())
-      navigation.replace("Login");
-    } catch (error) {
-      console.error('Error clearing local storage', error);
-      Alert.alert('Error', 'Could not log out. Please try again.');
-    }
   };
 
   const renderMenuItem = (item, isLast = false) => (
@@ -254,7 +343,7 @@ const MoreScreen = ({ navigation }) => {
           width: 36,
           height: 36,
           borderRadius: 18,
-          backgroundColor: item.id === "nightMode" && isDarkMode ?
+          backgroundColor: item.id === "themeMode" && isDarkMode ?
             "rgba(255, 255, 255, 0.1)" :
             `${theme.primaryColor}15`,
           alignItems: "center",
@@ -264,7 +353,7 @@ const MoreScreen = ({ navigation }) => {
           <Feather
             name={item.icon}
             size={18}
-            color={item.id === "nightMode" && isDarkMode ?
+            color={item.id === "themeMode" && isDarkMode ?
               "#FFFFFF" :
               theme.primaryColor
             }
@@ -324,6 +413,28 @@ const MoreScreen = ({ navigation }) => {
           />
         )}
 
+        {item.showRadio && (
+          <View style={{
+            width: 20,
+            height: 20,
+            borderRadius: 10,
+            borderWidth: 2,
+            borderColor: item.radioSelected ? theme.primaryColor : theme.textSecondary,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: item.radioSelected ? theme.primaryColor : 'transparent',
+          }}>
+            {item.radioSelected && (
+              <View style={{
+                width: 8,
+                height: 8,
+                borderRadius: 4,
+                backgroundColor: '#FFFFFF',
+              }} />
+            )}
+          </View>
+        )}
+
         {item.showArrow && (
           <Feather
             name="chevron-right"
@@ -335,11 +446,23 @@ const MoreScreen = ({ navigation }) => {
     </Pressable>
   );
 
+  // Show loading or nothing until theme is loaded
+  if (!isThemeLoaded) {
+    return (
+      <View style={{ 
+        flex: 1, 
+        backgroundColor: theme.backgroundColor,
+        justifyContent: 'center',
+        alignItems: 'center'
+      }}>
+        <Text style={{ color: theme.textSecondary }}>Loading...</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={{ flex: 1, backgroundColor: theme.backgroundColor }}>
       <StatusBar barStyle={theme.statusBarStyle} backgroundColor={theme.backgroundColor} />
-
-      {/* Header */}
 
       <ScrollView
         style={{ flex: 1 }}
@@ -409,7 +532,6 @@ const MoreScreen = ({ navigation }) => {
               {userData.department}
             </Text>
           </View>
-
         </View>
 
         {/* Menu Sections */}
@@ -462,7 +584,7 @@ const MoreScreen = ({ navigation }) => {
         {/* Logout Button */}
         <View style={{ marginHorizontal: 16, marginTop: 16 }}>
           <Pressable
-            onPress={showLogoutConfirmation} // Changed to show confirmation popup
+            onPress={showLogoutConfirmation}
             style={({ pressed }) => ({
               backgroundColor: theme.dangerColor,
               borderRadius: 12,

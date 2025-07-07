@@ -39,7 +39,6 @@ user_id:userId
     };
 
 
-    console.log(payload,'this is payload for create issue request')
     const response = await axios.post(`${API_URL}/v3/stock/request`, payload, { headers });
     return response.data;
   } catch (error) {

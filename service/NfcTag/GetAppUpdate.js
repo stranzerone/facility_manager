@@ -31,7 +31,6 @@ export default GetAppUdatesApi = async () => {
         params,
         withCredentials: true,
       });
-console.log(response.data,'this is for app update')
 
    return response.data
 

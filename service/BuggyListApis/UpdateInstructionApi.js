@@ -58,11 +58,9 @@ export const UpdateInstructionApi = async (data) => {
       const response = await axios.put(`${API_URL}/v3/inst`, payload, {  headers, withCredentials: true });
       // Check if the response is as expected
       if (response.data.status === 'success') {
-        console.log(response,'this is update resposne')
 
         return true; // Return success
       } else {
-        console.log(response,'this is update resposne')
 
         console.error('API response status was not success:', response.data);
         return false; // Return failure

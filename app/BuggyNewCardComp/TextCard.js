@@ -18,7 +18,7 @@ import { workOrderService } from "../../services/apis/workorderApis";
 import { usePermissions } from "../GlobalVariables/PermissionsContext";
 import CheckboxCardHeader from "./TopRow";
 
-const TextCard = ({ item, onUpdate, editable, type }) => {
+const TextCard = ({ item, onUpdate, editable, type,wo,as }) => {
   const { nightMode } = usePermissions();
   const [value, setValue] = useState(item.result || "");
   const updatedTime = useConvertToSystemTime(item?.updated_at);
@@ -42,7 +42,6 @@ const TextCard = ({ item, onUpdate, editable, type }) => {
         id: item.id,
         result: value.trim(),
         WoUuId: item.ref_uuid,
-        image: false,
       };
 
      const response =  await workOrderService.updateInstruction(payload);
@@ -54,12 +53,15 @@ const TextCard = ({ item, onUpdate, editable, type }) => {
   };
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
+    <KeyboardAvoidingView  style={{ flex: 1 }}>
       <View style={[styles.inputContainer, { backgroundColor }]} className="p-3 border border-gray-200 rounded-md mb-3 shadow-sm">
 
         {/* Header Section */}
 <CheckboxCardHeader
   item={item}
+    as={as}
+
+  wo={wo}
   nightMode={nightMode}
   updatedTime={updatedTime}
 />

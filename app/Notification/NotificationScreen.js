@@ -4,12 +4,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import NotificationCard from './NotificationCard';
 import Loader from '../LoadingScreen/AnimatedLoader';
 import { complaintService } from '../../services/apis/complaintApis';
+import { usePermissions } from '../GlobalVariables/PermissionsContext';
 
 const NotificationMainPage = () => {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-
+ const {nightMode}  = usePermissions()
   // Fetch notifications
   const initializeNotifications = async (isRefreshing = false) => {
     if (!isRefreshing) setLoading(true);
@@ -40,9 +41,12 @@ const NotificationMainPage = () => {
   return (
     <View style={styles.container}>
       {loading ? (
-        <View style={styles.loaderContainer}>
-          <Loader />
-        </View>
+  <View 
+    className={`flex items-center justify-center flex-1 ${nightMode ? "bg-black" : "bg-white"}`}
+  >
+    <Loader />
+  </View>
+
       ) : (
         <FlatList
           data={notifications}

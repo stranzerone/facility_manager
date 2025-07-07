@@ -3,7 +3,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL2, APP_VERSION_CODE,APP_ID_ONE_SIGNAL } from '@env'; // Assuming these are set in your .env file
 import { OneSignal } from 'react-native-onesignal';
 export const RegisterAppOneSignal = async () => {
-  console.log("inside registering one signal")
   try {
     // Fetch the user information from AsyncStorage
     const userInfo = await AsyncStorage.getItem('userInfo');
@@ -20,7 +19,6 @@ export const RegisterAppOneSignal = async () => {
     // Fetch OneSignal device ID
 const deviceId = await OneSignal.User.pushSubscription.getIdAsync();
 
-console.log(deviceId,'this is device id on sonesignal')
     const headers = {
       'Content-Type': 'application/json',
       'ism-auth': JSON.stringify({

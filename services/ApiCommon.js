@@ -45,9 +45,7 @@ export const ApiCommon = {
       conf.headers['Content-Type'] = 'application/json';
       conf.body = JSON.stringify(data);
     }
-
      const response = await fetch(url, conf);
-
     if (!response.ok) {
       console.error('❌ Error in response:', response.statusText);
       throw new Error(`HTTP error! Status: ${response.status}`);

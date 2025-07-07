@@ -119,7 +119,6 @@ export const workOrderService = {
       const userInfo = await AsyncStorage.getItem('userInfo');
       if (!userInfo) throw new Error('User information not found');
       const deviceId = await OneSignal.User.pushSubscription.getIdAsync();
-
       const payload = {
         app_name: 'ism-staff',
         app_version_code: APP_VERSION_CODE,
@@ -287,12 +286,12 @@ export const workOrderService = {
     return await ApiCommon.getReq(url, headers, params);
   },
 
-  getAssetWorkOrder: async (qrValue, selectedFilter, breakdown) => {
+  getAssetWorkOrder: async (qrValue, selectedFilter, breakdown,page) => {
     let user = await Common.getLoggedInUser()
     const params = {
       asset_uuid: qrValue,
-      per_page: '10',
-      page_no: '1',
+      per_page: '20',
+      page_no: page +1,
       "user_id": user.data.id,
       site_id: user.data.societyId,
       Status: selectedFilter,
@@ -310,12 +309,12 @@ export const workOrderService = {
 
 
 
-  getLocationWorkOrder: async (uuid, status, breakdownActive) => {
+  getLocationWorkOrder: async (uuid, status, breakdownActive,page) => {
     let user = await Common.getLoggedInUser()
     const params = {
       location_uuid: uuid,
-      per_page: '10',
-      page_no: '1',
+      per_page: '20',
+      page_no: page + 1,
       user_id: user.data.id,
       site_id: user.data.societyId,
       Status: status,
@@ -614,7 +613,6 @@ let base64Image = null;
 if (isImage) {
   base64Image = await workOrderService.compressAndConvertToBase64(uri);
 } else if (isPdf) {
-  console.log('Skipping compression for PDF file:', uri);
 
   // If you want PDF as base64 — you can also do:
   base64Image = await FileSystem.readAsStringAsync(uri, {
@@ -652,12 +650,11 @@ if (base64Image) {
        response = await ApiCommon.postReq(url,paylod, headers, uri);
 
      }
-    console.log(response,'this is image response')
-    await updateInstructionInFile(paylod.WoUuId, paylod.id, paylod.result, true)
+     //on on going to offline app release
+    // await updateInstructionInFile(paylod.WoUuId, paylod.id, paylod.result, true)
     if (isConnected) {
       paylod.result = response.data.url
 
-      console.log(paylod,'this is uplod paylod')
       const responseUpdate = await workOrderService.updateInstruction(paylod)
       return responseUpdate
     } else {

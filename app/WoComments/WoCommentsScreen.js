@@ -161,6 +161,8 @@ const getStyles = (nightMode) =>
     loaderContainer: {
       justifyContent: 'center',
       alignItems: 'center',
+      backgroundColor: nightMode ? '#121212' : '#f9f9f9',
+
       flex: 1,
     },
     commentsList: {
@@ -184,6 +186,8 @@ const getStyles = (nightMode) =>
       flex: 1,
       borderColor: nightMode ? '#555' : '#ccc',
       borderWidth: 1,
+      paddingVertical:10,
+paddingHorizontal: 10,
       borderRadius: 8,
       padding: 2,
       backgroundColor: nightMode ? '#2a2a2a' : 'white',

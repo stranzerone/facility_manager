@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   FlatList,
@@ -6,24 +6,124 @@ import {
   Text,
   TouchableOpacity,
   RefreshControl,
+  Animated,
 } from 'react-native';
 import ComplaintCard from './ComplaintCard';
 import { FontAwesome } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import FilterOptions from '../WorkOrders/WorkOrderFilter';
 import { usePermissions } from '../GlobalVariables/PermissionsContext';
 import Loader from '../LoadingScreen/AnimatedLoader';
 import { complaintService } from '../../services/apis/complaintApis';
 
-const ComplaintsScreen = () => {
+// Animated Complaint Card Component
+const AnimatedComplaintCard = ({ data, category, nightMode, locations, isRemoving, onRemoveComplete }) => {
+  const slideAnim = useRef(new Animated.Value(0)).current;
+  const opacityAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (isRemoving) {
+      // Animate card sliding out to the left
+      Animated.parallel([
+        Animated.timing(slideAnim, {
+          toValue: -400, // Slide to left
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacityAnim, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        onRemoveComplete?.();
+      });
+    }
+  }, [isRemoving]);
+
+  return (
+    <Animated.View
+      style={{
+        transform: [{ translateX: slideAnim }],
+        opacity: opacityAnim,
+      }}
+    >
+      <ComplaintCard 
+        data={data} 
+        categroy={category} 
+        nightMode={nightMode} 
+        locations={locations} 
+      />
+    </Animated.View>
+  );
+};
+
+// New Item Indicator Component
+const NewItemIndicator = ({ isVisible, nightMode }) => {
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.8)).current;
+
+  useEffect(() => {
+    if (isVisible) {
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          tension: 100,
+          friction: 8,
+          useNativeDriver: true,
+        }),
+      ]).start();
+
+      // Auto hide after 3 seconds
+      setTimeout(() => {
+        Animated.timing(fadeAnim, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }).start();
+      }, 3000);
+    }
+  }, [isVisible]);
+
+  if (!isVisible) return null;
+
+  return (
+    <Animated.View
+      style={[
+        styles.newItemIndicator,
+        {
+          backgroundColor: nightMode ? '#2D5016' : '#E8F5E8',
+          opacity: fadeAnim,
+          transform: [{ scale: scaleAnim }],
+        },
+      ]}
+    >
+      <FontAwesome name="plus-circle" size={16} color="#4CAF50" />
+      <Text style={[styles.newItemText, { color: nightMode ? '#A5D6A7' : '#4CAF50' }]}>
+Complaints Refreshed
+      </Text>
+    </Animated.View>
+  );
+};
+
+const ComplaintsScreen = ({route}) => {
   const [complaints, setComplaints] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showFilter, setShowFilter] = useState(false);
-  const navigation = useNavigation();
-  const { complaintPermissions, complaintFilter, setComplaintFilter, nightMode } = usePermissions();
   const [categories, setCategories] = useState([]);
   const [locations, setLocations] = useState();
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [removingItems, setRemovingItems] = useState(new Set());
+  const [showNewItemIndicator, setShowNewItemIndicator] = useState(false);
+  const {refresh}  = route.params || {}
+  const navigation = useNavigation();
+  const { complaintPermissions, complaintFilter, setComplaintFilter, nightMode } = usePermissions();
 
   const colors = {
     background: nightMode ? '#121212' : '#f9f9f9',
@@ -35,18 +135,67 @@ const ComplaintsScreen = () => {
     whiteText: '#fff',
   };
 
+  const getComplaintId = (complaint) => {
+    return complaint.id?.toString() || complaint.complaintId?.toString() || JSON.stringify(complaint);
+  };
+
+  const compareComplaints = (oldComplaints, newComplaints) => {
+    const oldIds = new Set(oldComplaints.map(getComplaintId));
+    const newIds = new Set(newComplaints.map(getComplaintId));
+    
+    const removedIds = [...oldIds].filter(id => !newIds.has(id));
+    const addedComplaints = newComplaints.filter(complaint => !oldIds.has(getComplaintId(complaint)));
+    
+    return { removedIds, addedComplaints };
+  };
+
+  const handleDataUpdate = useCallback((newData) => {
+    if (isInitialLoad) {
+      setComplaints(newData);
+      return;
+    }
+
+    const { removedIds, addedComplaints } = compareComplaints(complaints, newData);
+
+    // Handle removed items with animation
+    if (removedIds.length > 0) {
+      setRemovingItems(new Set(removedIds));
+      
+      // After animation completes, update the data
+      setTimeout(() => {
+        setComplaints(newData);
+        setRemovingItems(new Set());
+      }, 300);
+    } else {
+      // No items removed, just update normally
+      setComplaints(newData);
+    }
+
+    // Show indicator for new items
+    if (addedComplaints.length > 0 && !isInitialLoad) {
+      setShowNewItemIndicator(true);
+      setTimeout(() => setShowNewItemIndicator(false), 3000);
+    }
+  }, [complaints, isInitialLoad]);
+
   const fetchComplaints = useCallback(async () => {
     try {
-      setLoading(true);
+      if (isInitialLoad) {
+        setLoading(true);
+      }
+      
       const response = await complaintService.getAllComplaints();
-      setComplaints(response.data || []);
+      handleDataUpdate(response.data || []);
     } catch {
-      setComplaints([]);
+      if (isInitialLoad) {
+        setComplaints([]);
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
+      setIsInitialLoad(false);
     }
-  }, []);
+  }, [handleDataUpdate, isInitialLoad]);
 
   const fetchLocations = async () => {
     try {
@@ -68,17 +217,32 @@ const ComplaintsScreen = () => {
     }
   }, []);
 
-  useEffect(() => {
+useFocusEffect(
+  useCallback(() => {
     fetchComplaints();
-  }, []);
+  }, [])
+);
+
 
   useEffect(() => {
     fetchCategories();
     fetchLocations();
   }, [fetchCategories]);
 
+  // Update filter handling to reset initial load state
+  const handleFilterChange = (status) => {
+    setComplaintFilter(status);
+    setShowFilter(false);
+    // Don't reset isInitialLoad for filter changes
+    // setIsInitialLoad(true);
+    // fetchComplaints();
+  };
+
   const filteredComplaintsMemoized = useMemo(() => {
     if (complaintFilter === 'All') return complaints;
+    else if(complaintFilter === "Open"){
+      return complaints?.filter((c) => c.status.toLowerCase() === 'open');
+    }
     return complaints?.filter((c) => c.status.toLowerCase() === complaintFilter.toLowerCase());
   }, [complaints, complaintFilter]);
 
@@ -87,7 +251,25 @@ const ComplaintsScreen = () => {
     fetchComplaints();
   };
 
-  if (loading) {
+  const renderComplaintItem = ({ item }) => {
+    const itemId = getComplaintId(item);
+    const isRemoving = removingItems.has(itemId);
+    
+    return (
+      <AnimatedComplaintCard
+        data={item}
+        category={categories}
+        nightMode={nightMode}
+        locations={locations}
+        isRemoving={isRemoving}
+        onRemoveComplete={() => {
+          // This will be called when animation completes
+        }}
+      />
+    );
+  };
+
+  if (loading && isInitialLoad) {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
         <Loader />
@@ -139,6 +321,9 @@ const ComplaintsScreen = () => {
         </TouchableOpacity>
       </View>
 
+      {/* New Item Indicator */}
+      <NewItemIndicator isVisible={showNewItemIndicator} nightMode={nightMode} />
+
       {/* Filter Options */}
       {showFilter && (
         <FilterOptions
@@ -155,10 +340,7 @@ const ComplaintsScreen = () => {
             'Working',
           ]}
           selectedFilter={complaintFilter}
-          applyFilter={(status) => {
-            setComplaintFilter(status);
-            setShowFilter(false);
-          }}
+          applyFilter={handleFilterChange}
           closeFilter={() => setShowFilter(false)}
         />
       )}
@@ -166,15 +348,8 @@ const ComplaintsScreen = () => {
       {/* List or Empty State */}
       <FlatList
         data={filteredComplaintsMemoized}
-        keyExtractor={(item) => item.id?.toString() || Math.random().toString()}
-        renderItem={({ item }) => (
-          <ComplaintCard
-            data={item}
-            categroy={categories}
-            nightMode={nightMode}
-            locations={locations}
-          />
-        )}
+        keyExtractor={(item) => getComplaintId(item)}
+        renderItem={renderComplaintItem}
         ListEmptyComponent={() => (
           <View style={styles.noComplaintsContainer}>
             {complaintPermissions.some((p) => p.includes('R')) ? (
@@ -192,6 +367,7 @@ const ComplaintsScreen = () => {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
+        removeClippedSubviews={false} // Prevent issues with animations
       />
     </View>
   );
@@ -257,6 +433,30 @@ const styles = StyleSheet.create({
   addButtonText: {
     marginLeft: 8,
     fontSize: 16,
+  },
+  newItemIndicator: {
+    position: 'absolute',
+    top: 80,
+    right: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    zIndex: 1000,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  newItemText: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginLeft: 6,
   },
 });
 

@@ -31,10 +31,7 @@ const AssetSelect = () => {
 ; // Empty dependency array ensures this runs only once
 
   // Render each option as a selectable item
-  const handleSelect = (item) => {
-    console.log("Selected Asset:", item);
-    // You can handle the selected item here, like updating a parent component state or navigating to another screen
-  };
+ 
 
   return (
     <View style={styles.container}>

@@ -1,15 +1,56 @@
-import React, { useRef, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Dimensions, Alert } from 'react-native';
+import React, { useRef, useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Dimensions,
+  Alert,
+  Platform,
+} from 'react-native';
 import { Camera, CameraType } from 'react-native-camera-kit';
 import Icon from 'react-native-vector-icons/Feather';
+import { check, request, PERMISSIONS, RESULTS, openSettings } from 'react-native-permissions';
 
 const { width } = Dimensions.get('window');
 
 const CameraScreen = ({ navigation, route }) => {
   const cameraRef = useRef(null);
-  const [cameraType, setCameraType] = useState(CameraType.Back); // CameraType.Back or CameraType.Front
-  const [flashMode, setFlashMode] = useState('off');
+  const [cameraType, setCameraType] = useState(CameraType.Back); // Back or Front
+const [flashEnabled, setFlashEnabled] = useState(false);
   const [isCapturing, setIsCapturing] = useState(false);
+  const [hasPermission, setHasPermission] = useState(false);
+
+  useEffect(() => {
+    const checkPermission = async () => {
+      const permissionType =
+        Platform.OS === 'android'
+          ? PERMISSIONS.ANDROID.CAMERA
+          : PERMISSIONS.IOS.CAMERA;
+
+      const result = await check(permissionType);
+
+      if (result === RESULTS.GRANTED) {
+        setHasPermission(true);
+      } else {
+        const requestResult = await request(permissionType);
+        if (requestResult === RESULTS.GRANTED) {
+          setHasPermission(true);
+        } else {
+          Alert.alert(
+            'Camera Permission Required',
+            'Please enable camera permission in settings to use this feature.',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Open Settings', onPress: () => openSettings() },
+            ]
+          );
+        }
+      }
+    };
+
+    checkPermission();
+  }, []);
 
   const takePhoto = async () => {
     if (cameraRef.current && !isCapturing) {
@@ -35,13 +76,20 @@ const CameraScreen = ({ navigation, route }) => {
     );
   };
 
-  const toggleFlash = () => {
-    setFlashMode((prev) => {
-      if (prev === 'off') return 'on';
-      if (prev === 'on') return 'auto';
-      return 'off';
-    });
-  };
+const toggleFlash = () => {
+  setFlashEnabled((prev) => !prev);
+};
+
+
+  if (!hasPermission) {
+    return (
+      <View style={styles.container}>
+        <Text style={{ color: '#fff', textAlign: 'center', marginTop: 20 }}>
+          Waiting for camera permission...
+        </Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -49,12 +97,11 @@ const CameraScreen = ({ navigation, route }) => {
         ref={cameraRef}
         style={StyleSheet.absoluteFill}
         cameraType={cameraType}
-        flashMode={flashMode}
       />
 
       <View style={styles.controls}>
-        <TouchableOpacity onPress={toggleFlash} style={styles.sideButton}>
-          <Icon name="zap" size={24} color={flashMode !== 'off' ? '#FFD700' : '#fff'} />
+        <TouchableOpacity  style={styles.sideButton}>
+          {/* <Icon name="zap" size={24} color={!flashEnabled  ? '#FFD700' : '#fff'} /> */}
         </TouchableOpacity>
 
         <TouchableOpacity onPress={takePhoto} style={styles.captureButton}>

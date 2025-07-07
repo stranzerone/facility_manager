@@ -1,14 +1,16 @@
-import React, { useState } from "react";
+import  { useState } from "react";
 import { View, Text, TouchableOpacity, Image, Linking } from "react-native";
 import Icon from "react-native-vector-icons/FontAwesome";
+import Icons from 'react-native-vector-icons/Foundation';
 import ImageViewing from "react-native-image-viewing";
-import { usePermissions } from "../GlobalVariables/PermissionsContext";
+import { useNavigation } from "@react-navigation/native";
 
 const CheckboxCardHeader = ({
   item,
   nightMode,
   updatedTime,
-  
+  wo,
+  as
   
 }) => {
   const [modalVisible,setModalVisible]  = useState(false)
@@ -28,7 +30,7 @@ const CheckboxCardHeader = ({
   };
   const iconColor = nightMode ? "#E0E0E0" : "#1F2937";
   const dimColor = nightMode ? "#4B5563" : "gray"; // Tailwind gray-600/light
-
+const navigation = useNavigation()
   return (
     <View className="flex-row items-center justify-between mb-2">
       {/* Left section */}
@@ -52,7 +54,7 @@ const CheckboxCardHeader = ({
           </TouchableOpacity>
           :
              <TouchableOpacity onPress={handleFileDownload} disabled>
-            <Icon name="file-text" size={16} color="gray" />
+<Icon name="file-o" size={12} color="gray" />
           </TouchableOpacity>
         }
 
@@ -75,13 +77,11 @@ const CheckboxCardHeader = ({
         {updatedTime && item?.result && (
           <Text className="text-xs text-gray-400">{updatedTime}</Text>
         )}
-       {false && <TouchableOpacity onPress={() => alert("Raise Complaint")}>
-          <Icon
-            name="clipboard"
-            size={18}
-            color={nightMode ? "#F87171" : "#DC2626"}
-          />
-        </TouchableOpacity>}
+       {/* {
+        <TouchableOpacity onPress={() => navigation.navigate('RaiseChecklistComplaint', { item,wo,as })}>
+        <Icons name="clipboard-pencil" size={18} color="red" />
+
+        </TouchableOpacity>} */}
       </View>
 
       {/* Full screen image viewer */}

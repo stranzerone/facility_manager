@@ -19,7 +19,7 @@ import { usePermissions } from "../GlobalVariables/PermissionsContext";
 import CheckboxCardHeader from "./TopRow";
 import NetInfo from "@react-native-community/netinfo";
 
-const DocumentCard = ({ item, onUpdate, editable }) => {
+const DocumentCard = ({ item, onUpdate,as, editable,wo }) => {
   const { nightMode } = usePermissions();
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploadSuccess, setUploadSuccess] = useState(false);
@@ -115,11 +115,14 @@ const extractFileNameFromNewBill = (url) => {
 
   return (
     <View
-      className="pb-2 rounded-md mb-3 shadow-sm"
+      className="pb-2 rounded-md mb-3 shadow-sm py-2"
       style={[styles.inputContainer, { backgroundColor }]}
     >
       {/* Header */}
 <CheckboxCardHeader
+wo={wo}
+  as={as}
+
   item={item}
   nightMode={nightMode}
   updatedTime={updatedTime}

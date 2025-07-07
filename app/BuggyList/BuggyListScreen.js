@@ -22,7 +22,7 @@ import InfoCard from './InstructionDetails';
 import { workOrderService } from '../../services/apis/workorderApis';
 import { usePermissions } from '../GlobalVariables/PermissionsContext';
 
-const BuggyListPage = ({ uuid, wo, restricted, restrictedTime, id, type, sequence, handleBuggyChange }) => {
+const BuggyListPage = ({ uuid, wo,as, restricted, restrictedTime, id, type, sequence, handleBuggyChange }) => {
   const [data, setData] = useState([]);
   const [assetDescription, setAssetDescription] = useState('');
   const [loading, setLoading] = useState(false);
@@ -106,7 +106,13 @@ const BuggyListPage = ({ uuid, wo, restricted, restrictedTime, id, type, sequenc
       return result;
     }, {});
 
-  if (loading) return <Loader />;
+if (loading) return (
+  <View 
+    className={`flex items-center justify-center flex-1 ${nightMode ? "bg-black" : "bg-white"}`}
+  >
+    <Loader />
+  </View>
+);
   if (error) {
     return (
       <View style={[styles.errorContainer, { backgroundColor: nightMode ? '#121212' : '#f0f4f7' }]}>
@@ -134,12 +140,12 @@ const BuggyListPage = ({ uuid, wo, restricted, restrictedTime, id, type, sequenc
   key={groupIndex}
   style={{
     marginBottom: 20,
-    paddingBottom: 50,
+    paddingBottom: 0,
 backgroundColor: groupIndex % 2 === 1 
-  ? (nightMode ? '#1C1C2E' : '#D0E6FF') 
+  ? (nightMode ? '#1C1C2E' : '#87CEFA26') 
   : 'transparent',
     borderRadius: 10,
-    paddingTop: 8,
+    paddingTop: 1,
   }}
 >
                 <View
@@ -155,6 +161,7 @@ backgroundColor: groupIndex % 2 === 1
                     key={item.id}
                     restricted={restricted}
                     item={item}
+                    as={as}
                     onUpdateSuccess={handleRefreshData}
                     index={index}
                     WoUuId={uuid}
@@ -228,14 +235,16 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollViewContainer: {
-    flexGrow: 1,
+    paddingBottom:60,
+        paddingBottom:300,
+
   },
   groupHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 8,
     paddingHorizontal: 12,
-    marginTop: 4,
+    marginTop: 0,
     marginHorizontal: 12,
     borderRadius: 10,
   },

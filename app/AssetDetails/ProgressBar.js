@@ -4,6 +4,7 @@ import * as Progress from 'react-native-progress';
 import { useNavigation } from '@react-navigation/native';
 import DynamicPopup from '../DynamivPopUps/DynapicPopUpScreen';
 import { workOrderService } from '../../services/apis/workorderApis';
+import { usePermissions } from '../GlobalVariables/PermissionsContext';
 
 const ProgressPage = ({ data, wo,canComplete,id,sequence,restricted }) => {
   const [remark, setRemark] = useState('');
@@ -12,6 +13,7 @@ const ProgressPage = ({ data, wo,canComplete,id,sequence,restricted }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [canMarkComplete, setCanMarkComplete] = useState(false); // New state to track the button visibility condition
   const [popUp,setPopUp] = useState(false)
+  const {nightMode}  = usePermissions()
   const navigation = useNavigation();
 
 
@@ -60,14 +62,15 @@ if(mandatoryItems.length === manCount){
 
   
   const handleComplete = async () => {
+
    if(!remark){
   alert('Please Enter Remark To Mark As Complete')
 }else{
 
     try {
       setLock(true)
+      setCanMarkComplete(false)
       const response =  await workOrderService.markAsCompleteWo({item:wo, remark:remark,sequence:sequence});
-     console.log(response,'this is for mark as complete')
       setRemark(''); // Reset the remark input
       setModalVisible(false); // Close the modal
 
@@ -102,12 +105,13 @@ if(mandatoryItems.length === manCount){
             canMarkComplete ?(
             <TouchableOpacity
               className="flex flex-row bg-green-500 gap-1 py-1"
+              
               style={[
                 styles.tickContainer,
                 wo.Status === 'COMPLETED' || restricted && styles.disabledTickContainer, // Apply faint style if completed
               ]}
               onPress={() => wo.Status !== 'COMPLETED' && setModalVisible(true)} // Prevent opening modal if completed
-              disabled={wo.Status === 'COMPLETED' || restricted} // Disable button if completed
+              disabled={restricted} // Disable button if completed
             >
               <Text className="text-white text-xs font-black">{wo.Status === 'COMPLETED' ? 'Completed' : 'Mark As Complete'}</Text>
             </TouchableOpacity>
@@ -154,29 +158,38 @@ if(mandatoryItems.length === manCount){
         onRequestClose={() => setModalVisible(false)} // Close modal on back press
       >
         <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Enter Remark</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Add your remark  250 char"
-              value={remark}
-              onChangeText={setRemark}
-              maxLength={250}
-            />
-            <TouchableOpacity
-           
-              style={styles.completeButton}
-              onPress={handleComplete}
-            >
-              <Text style={styles.completeButtonText}>Mark as Complete</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={() => setModalVisible(false)}
-            >
-              <Text style={styles.closeButtonText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
+        <View style={[styles.modalContent, { backgroundColor: nightMode ? '#1F2937' : '#FFFFFF' }]}>
+  <Text style={[styles.modalTitle, { color: nightMode ? '#F9FAFB' : '#000000' }]}>Enter Remark</Text>
+  <TextInput
+    style={[
+      styles.input,
+      {
+        backgroundColor: nightMode ? '#374151' : '#FFFFFF',
+        color: nightMode ? '#F9FAFB' : '#000000',
+        borderColor: nightMode ? '#4B5563' : '#CCCCCC',
+      },
+    ]}
+    placeholder="Add your remark 250 char"
+    placeholderTextColor={nightMode ? '#9CA3AF' : '#999999'}
+    value={remark}
+    onChangeText={setRemark}
+    maxLength={250}
+  />
+  <TouchableOpacity
+    style={styles.completeButton}
+    onPress={handleComplete}
+    disabled={lock}
+  >
+    <Text style={styles.completeButtonText}>{lock ? "Updating WO" : "Mark as Complete"}</Text>
+  </TouchableOpacity>
+  <TouchableOpacity
+    style={styles.closeButton}
+    onPress={() => setModalVisible(false)}
+  >
+    <Text style={styles.closeButtonText}>Cancel</Text>
+  </TouchableOpacity>
+</View>
+
         </View>
       </Modal>
      

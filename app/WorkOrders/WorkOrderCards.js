@@ -32,7 +32,7 @@ const WorkOrderCard = React.memo(({ workOrder, previousScreen, type, uuid }) => 
   const navigation = useNavigation();
   // Ensure workOrder and workOrder.wo exist and are objects, or provide defaults
   const wo = workOrder?.wo || {};
-
+const as = workOrder?.as || {};
   const statusColor = getStatusColor(wo.Status);
   const priorityColor = getPriorityColor(wo.Priority);
   const [restricted, setRestricted] = useState(false);
@@ -85,7 +85,8 @@ const WorkOrderCard = React.memo(({ workOrder, previousScreen, type, uuid }) => 
       if (workOrderReadPermission || uuid) {
         navigation.navigate('BuggyListTopTabs', {
           workOrder: wo.uuid, // Use wo.uuid
-          wo: wo,             // Pass the safer wo object
+          wo: wo,            // Pass the safer wo object
+          as: as,
           previousScreen: previousScreen,
           restricted: restricted,
           restrictedTime: restrictedTime

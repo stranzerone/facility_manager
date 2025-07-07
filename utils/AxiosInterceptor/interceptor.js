@@ -52,7 +52,9 @@ const mapWorkorders = (ids = [], breakdown = false,Status= "OPEN") => {
     })
     .filter(Boolean);
 };
-if (!isOffline) {
+// if (!isOffline) {
+if (true) {
+
   console.log("i am online")
   const userInfo = await AsyncStorage.getItem('userInfo');
   const loggedInUser = JSON.parse(userInfo);

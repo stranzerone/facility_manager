@@ -76,6 +76,7 @@ export const complaintService = {
 
 
   createComplaint : async (data) => {
+    const resource = data.as
     const payload ={
       "complaint_type": data.category.id,
       "constant_society_id": data.society,
@@ -85,21 +86,18 @@ export const complaintService = {
       "sub_category_id": data.data.id,
       "description":data.description,
       "file":data.image,
+      data:JSON.stringify({resource})
       }
 
- 
     const url = `${API_URL2}/addComplaint`;
     const headers = await Util.getCommonAuth()
 
-    return await ApiCommon.postReq(url, payload, headers);
+    const res =  await ApiCommon.postReq(url, payload, headers);
+    return res
   },
 
 
     closeComplaint : async (payload) => {
-     let user = await Common.getLoggedInUser()
-
-
-
     const url = `${API_URL2}/staff/updatecomplaint`;
     const headers = await Util.getCommonAuth()
     const response =  await ApiCommon.putReq(url, payload, headers);

@@ -102,7 +102,6 @@ const ComplaintDropdown = () => {
 const styles = StyleSheet.create({
   flexContainer: {
     flex: 1,
-    backgroundColor: '#F9F9F9',
   },
   flexContainerDark: {
     backgroundColor: '#121212',

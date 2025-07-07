@@ -39,6 +39,7 @@ const ComplaintCard = ({ data, categroy,locations }) => {
       complaint: data,
       category: myCat,
       creator: createdByName,
+      location:myLocation
     });
   };
 

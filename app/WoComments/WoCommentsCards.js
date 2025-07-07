@@ -10,8 +10,8 @@ const CommentCard = ({ comment }) => {
   const styles = getStyles(nightMode);
 
   const users = useSelector((state) => state.users.data);
-  const user = users.length > 1 && Array.isArray(users[1]) 
-    ? users[1].find((u) => u.user_id === comment.created_by) 
+  const user = users.length > 1 && Array.isArray(users) 
+    ? users?.find((u) => u.user_id == comment.created_by) 
     : null;
   const userName = user ? user.name : 'Unknown User';
   const formattedDateTime = format(new Date(comment.created_at), 'MMMM d, HH:mm');

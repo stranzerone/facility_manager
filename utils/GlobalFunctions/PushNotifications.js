@@ -4,7 +4,6 @@ import { APP_ID_ONE_SIGNAL } from '@env';
 const getOneSignalId = async () => {
   try {
     const id = await OneSignal.User.getOnesignalId();
-    console.log('OneSignal ID:', id);
   } catch (error) {
     console.error('Error getting OneSignal ID:', error);
   }
@@ -14,7 +13,6 @@ const getOneSignalId = async () => {
 const getExternalId = async () => {
   try {
     const id = await OneSignal.User.getExternalId();
-    console.log('External ID:', id);
   } catch (error) {
     console.error('Error getting External ID:', error);
   }
@@ -25,7 +23,6 @@ const getPushId = async () => {
   try {
     const id = await OneSignal.User.pushSubscription.getIdAsync();
     const token = await OneSignal.User.pushSubscription.getTokenAsync();
-    console.log('Push Subscription ID:', id, 'Token:', token);
   } catch (error) {
     console.error('Error getting Push ID:', error);
   }
@@ -54,7 +51,6 @@ const onesignalInitalize = async () => {
 
   // Check notification permissions (optional)
   const permissionStatus = await OneSignal.Notifications.getPermissionAsync();
-  console.log('Notification Permission Status:', permissionStatus);
 };
 
 export default onesignalInitalize;

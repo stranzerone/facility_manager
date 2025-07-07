@@ -9,7 +9,7 @@ import { usePermissions } from "../GlobalVariables/PermissionsContext";
 import ImageViewing from "react-native-image-viewing";
 import CheckboxCardHeader from "./TopRow";
 
-const CheckboxCard = ({ item, onUpdate, editable }) => {
+const CheckboxCard = ({ item, onUpdate,as, editable,wo }) => {
   const { nightMode } = usePermissions();
   const [isChecked, setIsChecked] = useState(item.result === "1");
   const updatedTime = useConvertToSystemTime(item?.updated_at);
@@ -24,7 +24,6 @@ const CheckboxCard = ({ item, onUpdate, editable }) => {
       : nightMode ? "#121212" : "#E5E7EB";
 
   const textColor = nightMode ? "#F3F4F6" : "#1F2937";
-
   const handleCheckboxPress = async () => {
     const newState = !isChecked;
     setIsChecked(newState);
@@ -33,7 +32,6 @@ const CheckboxCard = ({ item, onUpdate, editable }) => {
       id: item.id,
       result: newState ? "1" : "0",
       WoUuId: item.ref_uuid,
-      image: false,
     };
 
     try {
@@ -55,6 +53,8 @@ const CheckboxCard = ({ item, onUpdate, editable }) => {
 {/* Top Row */}
 <CheckboxCardHeader
   item={item}
+  wo={wo}
+  as={as}
   nightMode={nightMode}
   updatedTime={updatedTime}
   modalVisible={modalVisible}
@@ -64,7 +64,7 @@ const CheckboxCard = ({ item, onUpdate, editable }) => {
       {/* Checkbox + Title */}
       <View className="flex-row items-center justify-center mb-2">
         <Text className="font-bold text-md mr-2" style={{ color: textColor }}>{item.order}.</Text>
-        <CircularCheckbox editable={editable} isChecked={isChecked} onPress={handleCheckboxPress} />
+        <CircularCheckbox editable={editable} isChecked={isChecked} onPress={handleCheckboxPress} nightMode={nightMode} />
         <TouchableOpacity disabled={!editable} onPress={handleTitlePress} className="ml-3 flex-1">
           <Text numberOfLines={4} style={[styles.title, { color: textColor }]}>{item.title}</Text>
         </TouchableOpacity>
@@ -95,7 +95,7 @@ const CircularCheckbox = ({ isChecked, onPress, editable, nightMode }) => {
     >
       <View className={`w-5 h-5 rounded-full border-2 ${borderColorClass} flex items-center justify-center`}>
         {isChecked && (
-          <View className="w-3.5 h-3.5 rounded-full bg-[#074B7C]" />
+          <View className={`w-3.5 h-3.5 rounded-full ${nightMode? "bg-white": "bg-[#074B7C]"}`} />
         )}
       </View>
     </TouchableOpacity>

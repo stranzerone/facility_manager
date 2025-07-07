@@ -36,7 +36,6 @@ const [refreshKey, setRefreshKey] = useState(0);
 
   useFocusEffect(
      useCallback(() => {
-    console.log("MainScannerPage focused, refreshing...");
     setRefreshKey((prev) => prev + 1);
   }, [])
 );

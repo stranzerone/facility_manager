@@ -1,68 +1,65 @@
-import  { useState } from "react";
+import { useState, useRef } from "react";
 import { View, Text, TextInput, TouchableOpacity, Keyboard } from "react-native";
 import styles from "./styles";
 import Icon from "react-native-vector-icons/FontAwesome";
 import { workOrderService } from "../../services/apis/workorderApis";
 import { usePermissions } from "../GlobalVariables/PermissionsContext";
-const RemarkCard = ({ item,editable }) => {
-  
-  // Initialize the remark state based on item.remark, if exists
+
+const RemarkCard = ({ item, editable }) => {
   const [isEditing, setIsEditing] = useState(false);
-  const [remark, setRemark] = useState(item.remarks || ""); // Default to empty string if no remark
-  // Handle click on title to activate the input
-  const {nightMode}  = usePermissions()
+  const [remark, setRemark] = useState(item.remarks || "");
+  const inputRef = useRef(null); // ref to TextInput
+  const { nightMode } = usePermissions();
+
   const handleTitleClick = () => {
-    setIsEditing(true); // Activate the input field
+    setIsEditing(true);
+
+    // Delay focus to allow TextInput to render first
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 100);
   };
 
-  // Handle text input change
   const handleRemarkChange = (text) => {
     setRemark(text);
   };
 
-  // Handle blur event to stop editing and save the remark
   const handleBlur = async () => {
-    setIsEditing(false); // Close the input field
+    setIsEditing(false);
 
     const payload = {
-      
       id: item.id,
-      remarks: remark.trim(), // Send trimmed value
+      remarks: remark.trim(),
       WoUuId: item.ref_uuid,
     };
 
     try {
-      // Call the API to update the remark value
-       await workOrderService.updateInstruction(payload);
+      await workOrderService.updateInstruction(payload);
     } catch (error) {
       console.error("Error updating remark:", error);
     }
 
-    // Dismiss the keyboard
-    Keyboard.dismiss(); 
+    Keyboard.dismiss();
   };
 
   return (
     <View className="ml-1 flex-grow">
       {isEditing ? (
         <TextInput
-          style={[styles.inputContainer,{height:35}]}
+          ref={inputRef}
+          style={[styles.inputContainer, { height: 35 }]}
           value={remark}
           onChangeText={handleRemarkChange}
-          placeholder="Enter remark upto 250 char"
+          placeholder="Enter remark up to 250 char"
           className="border border-gray-300 rounded p-2 mt-2"
-          autoFocus
-          onBlur={handleBlur} // Close editing, save, and dismiss keyboard when focus is lost
-          onEndEditing={handleBlur} // Optional: Ensure API is called when editing ends
+          onBlur={handleBlur}
+          onEndEditing={handleBlur}
         />
       ) : (
-        <TouchableOpacity
-        disabled={!editable}
-        onPress={handleTitleClick}>
-          <Text className={`text-xs font-bold text-${nightMode?"white":"#074B7C"} mt-2`}>
-          <Icon name="pencil" size={16}  /> 
-          {'  '}
-           Remark: {remark || "Click to add remark"}
+        <TouchableOpacity disabled={!editable} onPress={handleTitleClick}>
+          <Text className={`text-xs font-bold mt-2`} style={{ color: nightMode ? "white" : "#074B7C" }}>
+            <Icon name="pencil" size={16} />{"  "}
+            Remark: {remark || "Click to add remark"}
           </Text>
         </TouchableOpacity>
       )}

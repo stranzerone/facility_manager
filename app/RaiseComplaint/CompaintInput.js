@@ -1,4 +1,4 @@
-import React, { useState, useLayoutEffect } from 'react';
+import React, { useState, useLayoutEffect, useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,7 @@ import {
   Alert,
 } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
-import { CommonActions, useNavigation } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import DynamicPopup from "../DynamivPopUps/DynapicPopUpScreen";
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as FileSystem from 'expo-file-system';
@@ -22,9 +22,10 @@ import { complaintService } from '../../services/apis/complaintApis';
 import { usePermissions } from '../GlobalVariables/PermissionsContext';
 
 const NewComplaintPage = ({ route }) => {
-  const { subCategory, category } = route.params;
+  const { subCategory = [], category = [], item = {}, wo = {}, as = {} } = route.params || {};
   const { nightMode } = usePermissions();
-  
+  const [selectedCategory, setSelectedCategory] = useState(category || null);
+  const [selectedSubCategory, setSelectedSubCategory] = useState(subCategory || null);
   const [location, setLocation] = useState('');
   const [allLocations, setAllLocations] = useState([]);
   const [filteredLocations, setFilteredLocations] = useState([]);
@@ -57,6 +58,22 @@ const NewComplaintPage = ({ route }) => {
     };
     fetchAllLocations();
   }, []);
+
+  useEffect(() => {
+    initalDescription();
+  }, []);
+
+  const initalDescription = () => {
+    if (
+      wo && Object.keys(wo).length > 0 &&
+      item && Object.keys(item).length > 0
+    ) {
+      const DescriptionText = `${wo["Sequence No"]}: ${wo?.Name}\nInstruction: ${item?.title || 'N/A'}`;
+      setDescription(DescriptionText);
+    } else {
+      setDescription('');
+    }
+  };
 
   const handleLocationInput = (text) => {
     setLocation(text);
@@ -109,7 +126,17 @@ const NewComplaintPage = ({ route }) => {
   };
 
   const submitComplaint = async () => {
-    if (subCategory.name === 'other' && !description.trim()) {
+    if (!selectedCategory) {
+      Alert.alert("Validation", "Please select a category");
+      return;
+    }
+
+    if (!selectedSubCategory) {
+      Alert.alert("Validation", "Please select a sub-category");
+      return;
+    }
+
+    if (selectedSubCategory.name === 'other' && !description.trim()) {
       Alert.alert("Validation", "Please enter Description to add Complaint");
       return;
     }
@@ -118,13 +145,15 @@ const NewComplaintPage = ({ route }) => {
     setPopupVisible(false);
 
     const data = {
-      category,
-      data: subCategory,
+      category: selectedCategory,
+      data: selectedSubCategory,
       society: location.id || null,
       description,
       image: longUrl,
       selfAssign,
+      as
     };
+
     try {
       const response = await complaintService.createComplaint(data);
       if (response.status === 'success') {
@@ -133,10 +162,11 @@ const NewComplaintPage = ({ route }) => {
         setPopupVisible(true);
         setTimeout(() => {
           setPopupVisible(false);
-navigation.reset({
-  index: 0,
-  routes: [{ name: 'ServiceRequests' }],
-});
+          if (Array.isArray(subCategory) ? subCategory.length > 0 : subCategory && typeof subCategory === 'object') {
+            navigation.navigate('ComplaintsScreen', { refresh: true });
+          } else {
+            navigation.goBack();
+          }
         }, 1000);
       } else {
         throw new Error('Submission failed');
@@ -163,20 +193,24 @@ navigation.reset({
         keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 40}
       >
         <ScrollView style={styles.container}>
-          {/* Category */}
+          {/* ✅ Category Display */}
           <View style={[styles.section, nightMode && styles.sectionDark]}>
             <Text style={[styles.label, nightMode && styles.labelDark]}>Category</Text>
-            <Text style={[styles.valueText, nightMode && styles.valueTextDark]}>
-              {category.name || 'Not selected'}
-            </Text>
+            <View style={[styles.input, nightMode && styles.inputDark]}>
+              <Text style={[styles.inputText, nightMode && styles.inputTextDark]}>
+                {selectedCategory?.name || 'N/A'}
+              </Text>
+            </View>
           </View>
 
-          {/* Sub-Category */}
+          {/* ✅ Sub-Category Display */}
           <View style={[styles.section, nightMode && styles.sectionDark]}>
             <Text style={[styles.label, nightMode && styles.labelDark]}>Sub Category</Text>
-            <Text style={[styles.valueText, nightMode && styles.valueTextDark]}>
-              {subCategory.name || 'Not selected'}
-            </Text>
+            <View style={[styles.input, nightMode && styles.inputDark]}>
+              <Text style={[styles.inputText, nightMode && styles.inputTextDark]}>
+                {selectedSubCategory?.name || 'N/A'}
+              </Text>
+            </View>
           </View>
 
           {/* Location */}
@@ -305,6 +339,8 @@ navigation.reset({
   );
 };
 
+
+
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -351,15 +387,64 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     marginBottom: 10,
     color: '#000000',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   inputDark: {
     backgroundColor: '#2C2C2E',
     borderColor: '#444',
     color: '#E5E5EA',
   },
+  inputDisabled: {
+    backgroundColor: '#f5f5f5',
+    borderColor: '#ccc',
+  },
+  inputText: {
+    fontSize: 16,
+    color: '#000000',
+    flex: 1,
+  },
+  inputTextDark: {
+    color: '#E5E5EA',
+  },
+  placeholder: {
+    color: '#999',
+  },
+  textDisabled: {
+    color: '#ccc',
+  },
   textarea: {
     height: 70,
     textAlignVertical: 'top',
+    flexDirection: 'column',
+  },
+  dropdown: {
+    minHeight:100,
+    borderWidth: 1,
+    borderColor: '#1996D3',
+    borderRadius: 8,
+    backgroundColor: '#FFF',
+    marginTop: 5,
+  },
+  dropdownDark: {
+    backgroundColor: '#2C2C2E',
+    borderColor: '#444',
+  },
+  dropdownItem: {
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#DDD',
+  },
+  dropdownItemDark: {
+    borderBottomColor: '#555',
+  },
+  dropdownText: {
+    fontSize: 16,
+    color: '#1996D3',
+  },
+  dropdownTextDark: {
+    color: '#74B9FF',
   },
   loader: {
     marginTop: 10,

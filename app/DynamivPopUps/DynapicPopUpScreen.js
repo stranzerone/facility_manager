@@ -7,11 +7,10 @@ import {
   StyleSheet,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
-import { usePermissions } from '../GlobalVariables/PermissionsContext';
 
 const DynamicPopup = ({ visible, type, message, onClose, onOk }) => {
-  const { nightMode } = usePermissions();
 
+  const nightMode = false;
   const iconNames = {
     success: 'check-circle',
     error: 'times-circle',

@@ -15,7 +15,7 @@ const BuggyListTopTabs = ({ route }) => {
   const wo = route.params.wo;
   const restricted = route.params.restricted;
   const restrictedTime = route.params.restrictedTime;
-
+  const as = route.params.as || {}; // Ensure 'as' is defined
   const navigation = useNavigation();
 
   const handleBuggyChange = (value) => {
@@ -39,6 +39,7 @@ const BuggyListTopTabs = ({ route }) => {
                 restrictedTime={restrictedTime}
                 uuid={uuid}
                 wo={wo}
+                as={as}
                 handleBuggyChange={handleBuggyChange}
               />
             ) : (

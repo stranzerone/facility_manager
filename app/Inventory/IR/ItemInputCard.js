@@ -5,9 +5,11 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
+  KeyboardAvoidingView,
 } from "react-native";
 import Icon from "react-native-vector-icons/FontAwesome";
 import { usePermissions } from "../../GlobalVariables/PermissionsContext";
+import { Platform } from "react-native";
 
 // Memoized Item Component for better performance
 export default ItemEntry = React.memo(({ 
@@ -84,7 +86,7 @@ export default ItemEntry = React.memo(({
         backgroundColor: currentTheme.cardBg,
         borderRadius: 16,
         padding: 16,
-        marginBottom: 16,
+        marginBottom: 8,
         shadowColor: currentTheme.shadowColor,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: isDarkMode ? 0.3 : 0.06,
@@ -120,6 +122,7 @@ export default ItemEntry = React.memo(({
           borderColor: currentTheme.border,
           borderRadius: 12,
           paddingHorizontal: 12,
+          paddingVertical:8,
           marginBottom: 4,
           flexDirection: 'row',
           justifyContent: 'space-between',
@@ -127,6 +130,11 @@ export default ItemEntry = React.memo(({
           backgroundColor: currentTheme.inputBg,
         }}
       >
+         <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'android' ? 70 : 0}
+      style={{ flex: 1 }}
+    >
         <TextInput
           style={{
             color: currentTheme.textPrimary,
@@ -141,6 +149,7 @@ export default ItemEntry = React.memo(({
           }}
           onFocus={() => handleUpdate(index, "isDropdownOpen", true)}
         />
+        </KeyboardAvoidingView>
         {loading ? (
           <Text style={{ color: currentTheme.textMuted }}>Loading..</Text>
         ) : (

@@ -1,5 +1,5 @@
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
-import React, { useCallback, useEffect, useLayoutEffect, useState, useRef } from "react";
+import  { useCallback, useEffect, useState, useRef } from "react";
 import {
   View,
   Text,
@@ -172,7 +172,7 @@ const TechnicianDashboard = () => {
       id: "OW",
       name: "Open Work Orders",
       count: openWoLength,
-      icon: "file-text",
+      icon: "clipboard",
       color: theme.primaryColor,
       iconBgColor: "#FFFFFF",
       route: "MyWorkOrders",
@@ -325,7 +325,7 @@ const getOpenWoLength = async () => {
         showsVerticalScrollIndicator={false}
       >
         {/* Offline Sync Card (previously Work Progress Card) */}
-        <View style={{ 
+      { false &&  <View style={{ 
           backgroundColor: theme.primaryColor, 
           borderRadius: 12, 
           padding: 14,
@@ -512,7 +512,7 @@ const getOpenWoLength = async () => {
               </Text>
             </View>
           </View>
-        </View>
+        </View>}
 
         {/* Work Categories Section */}
         <Text style={{ fontSize: 16, fontWeight: "600", color: theme.textPrimary, marginBottom: 10, marginTop: 6 }}>
@@ -582,8 +582,8 @@ const getOpenWoLength = async () => {
                 {category.active ? "Tap to view" : "Access required"}
               </Text>
               
-              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end" }}>
-                <Text style={{ 
+              <View style={{ flexDirection: "row",position:'absolute', justifyContent: "flex-end", alignItems: "flex-end",height:"auto",bottom:4,right:8 }}>
+                {/* <Text style={{ 
                   color: category.id === "OW" ? "#FFFFFF" : theme.primaryColor, 
                   fontSize: 22, // Increased font size
                   fontWeight: "bold" 
@@ -594,20 +594,20 @@ const getOpenWoLength = async () => {
                     fontWeight: "normal", 
                     color: category.id === "OW" ? "rgba(255,255,255,0.7)" : theme.textSecondary 
                   }}> items</Text>
-                </Text>
+                </Text> */}
                 
-                <View style={{ 
-                  width: 40, // Increased size
-                  height: 40, // Increased size
-                  borderRadius: 20, 
-                  backgroundColor: category.iconBgColor,
-                  alignItems: "center",
-                  justifyContent: "center"
-                }}>
+  <View style={{ 
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: category.iconBgColor,
+    alignItems: "center",
+    justifyContent: "center"
+  }}>
                   <Feather 
                     name={category.icon} 
                     size={20} 
-                    color={category.id !== "OW" ? category.color : category.iconBgColor} 
+                    color={category.id !== "OW" ? category.color : category.color} 
                   />
                 </View>
               </View>

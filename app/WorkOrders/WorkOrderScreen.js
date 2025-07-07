@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   FlatList,
   Modal,
   ActivityIndicator,
+  Animated,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import FilterOptions from './WorkOrderFilter';
@@ -18,6 +19,7 @@ import { fetchAllTeams } from '../../utils/Slices/TeamSlice';
 import { useDispatch, useSelector } from 'react-redux';
 import { usePermissions } from '../GlobalVariables/PermissionsContext';
 import { workOrderService } from "../../services/apis/workorderApis";
+
 // Colors based on nightMode
 const getColors = (nightMode) => ({
   header: nightMode ? '#2D3748' : '#074B7C',
@@ -30,6 +32,97 @@ const getColors = (nightMode) => ({
   noDataIcon: nightMode ? '#f8f9fa' : '#074B7C',
   whiteText: '#ffffff',
 });
+
+// Animated Work Order Card Component
+const AnimatedWorkOrderCard = ({ workOrder, previousScreen, uuid, isRemoving, onRemoveComplete }) => {
+  const slideAnim = useRef(new Animated.Value(0)).current;
+  const opacityAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (isRemoving) {
+      // Animate card sliding out to the left
+      Animated.parallel([
+        Animated.timing(slideAnim, {
+          toValue: -400, // Slide to left
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacityAnim, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        onRemoveComplete?.();
+      });
+    }
+  }, [isRemoving]);
+
+  return (
+    <Animated.View
+      style={{
+        transform: [{ translateX: slideAnim }],
+        opacity: opacityAnim,
+      }}
+    >
+      <WorkOrderCard 
+        workOrder={workOrder} 
+        previousScreen={previousScreen} 
+        uuid={uuid} 
+      />
+    </Animated.View>
+  );
+};
+
+// New Item Indicator Component
+const NewItemIndicator = ({ isVisible }) => {
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.8)).current;
+
+  useEffect(() => {
+    if (isVisible) {
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          tension: 100,
+          friction: 8,
+          useNativeDriver: true,
+        }),
+      ]).start();
+
+      // Auto hide after 3 seconds
+      setTimeout(() => {
+        Animated.timing(fadeAnim, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }).start();
+      }, 3000);
+    }
+  }, [isVisible]);
+
+  if (!isVisible) return null;
+
+  return (
+    <Animated.View
+      style={[
+        styles.newItemIndicator,
+        {
+          opacity: fadeAnim,
+          transform: [{ scale: scaleAnim }],
+        },
+      ]}
+    >
+      <Icon name="plus-circle" size={16} color="#4CAF50" />
+      <Text style={styles.newItemText}>Refreshed List</Text>
+    </Animated.View>
+  );
+};
 
 const WorkOrderPage = ({ route }) => {
   const qrValue = route?.params?.qrValue || null;
@@ -47,6 +140,10 @@ const WorkOrderPage = ({ route }) => {
   const [flag, setFlag] = useState(false);
   const [pageNo, setPageNo] = useState(0);
   const [hasMoreData, setHasMoreData] = useState(true);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [removingItems, setRemovingItems] = useState(new Set());
+  const [showNewItemIndicator, setShowNewItemIndicator] = useState(false);
+const prevQrValueRef = useRef(null);
 
   const navigation = useNavigation();
   const dispatch = useDispatch();
@@ -54,6 +151,7 @@ const WorkOrderPage = ({ route }) => {
   const teams = useSelector((state) => state.teams.data);
   const { ppmAsstPermissions, ppmWorkorder, nightMode } = usePermissions();
   const colors = getColors(nightMode);
+
   useEffect(() => {
     if (!users?.length || !teams?.length) {
       dispatch(fetchAllTeams());
@@ -61,10 +159,24 @@ const WorkOrderPage = ({ route }) => {
     }
   }, []);
 
+  const getWorkOrderId = (workOrder) => {
+    return workOrder.wo?.['Sequence No'] || workOrder.id || JSON.stringify(workOrder);
+  };
+
+  const compareWorkOrders = (oldOrders, newOrders) => {
+    const oldIds = new Set(oldOrders.map(getWorkOrderId));
+    const newIds = new Set(newOrders.map(getWorkOrderId));
+    
+    const removedIds = [...oldIds].filter(id => !newIds.has(id));
+    const addedOrders = newOrders.filter(order => !oldIds.has(getWorkOrderId(order)));
+    
+    return { removedIds, addedOrders };
+  };
+
   const fetchData = async (page = 0, isLoadMore = false) => {
     if (isLoadMore) {
       setLoadingMore(true);
-    } else {
+    } else if (isInitialLoad) {
       setLoading(true);
     }
 
@@ -81,11 +193,10 @@ const WorkOrderPage = ({ route }) => {
               if (isLoadMore) {
                 setWorkOrders(prev => [...prev, ...merged]);
               } else {
-                setWorkOrders(merged || []);
+                handleDataUpdate(merged || []);
               }
               
-              // Check if we have more data (assuming 20 items per page)
-              setHasMoreData(merged.length === 20);
+              setHasMoreData(merged.length === 10);
             } else {
               const bd = await workOrderService.getLocationWorkOrder(qrValue, selectedFilter, true, page);
               const wo = await workOrderService.getLocationWorkOrder(qrValue, selectedFilter, false, page);
@@ -94,10 +205,10 @@ const WorkOrderPage = ({ route }) => {
               if (isLoadMore) {
                 setWorkOrders(prev => [...prev, ...merged]);
               } else {
-                setWorkOrders(merged || []);
+                handleDataUpdate(merged || []);
               }
               
-              setHasMoreData(merged.length === 20);
+              setHasMoreData(merged.length === 10);
             }
             break;
           case "ME":
@@ -108,22 +219,19 @@ const WorkOrderPage = ({ route }) => {
           if (isLoadMore) {
             setWorkOrders(prev => [...prev, ...(response || [])]);
           } else {
-            setWorkOrders(response || []);
+            handleDataUpdate(response || []);
           }
-          setHasMoreData(response?.length === 20);
+          setHasMoreData(response?.length === 10 || response?.length === 20);
         }
       } else {
         if (screenType === "OW") {
-          console.log(selectedFilter,'this is selected filter')
           response = await workOrderService.getAllWorkOrders(selectedFilter, flag, page);
-          console.log(response,'this is response')
           if (isLoadMore) {
             setWorkOrders(prev => [...prev, ...(response.data || [])]);
           } else {
-            setWorkOrders(response.data || []);
+            handleDataUpdate(response.data || []);
           }
           
-          // Check if we have more data
           setHasMoreData(response.data?.length === 20);
         }
       }
@@ -133,18 +241,58 @@ const WorkOrderPage = ({ route }) => {
       setLoading(false);
       setLoadingMore(false);
       setRefreshing(false);
+      setIsInitialLoad(false);
     }
   };
 
+  const handleDataUpdate = (newData) => {
+    if (isInitialLoad) {
+      setWorkOrders(newData);
+      return;
+    }
 
-useFocusEffect(
-  useCallback(() => {
-    // Refresh when returning to this screen
+    const { removedIds, addedOrders } = compareWorkOrders(workOrders, newData);
+
+    // Handle removed items with animation
+    if (removedIds.length > 0) {
+      setRemovingItems(new Set(removedIds));
+      
+      // After animation completes, update the data
+      setTimeout(() => {
+        setWorkOrders(newData);
+        setRemovingItems(new Set());
+      }, 300);
+    } else {
+      // No items removed, just update normally
+      setWorkOrders(newData);
+    }
+
+    // Show indicator for new items
+    if (addedOrders.length > 0 && !isInitialLoad) {
+      setShowNewItemIndicator(true);
+      setTimeout(() => setShowNewItemIndicator(false), 3000);
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      setPageNo(0);
+      setHasMoreData(true);
+      fetchData(0, false);
+    }, [qrValue, wotype, flag, selectedFilter])
+  );
+useEffect(() => {
+  if (prevQrValueRef.current !== qrValue) {
+    prevQrValueRef.current = qrValue;
+    setLoading(true); // Show loader
+    setWorkOrders([]); // Clear old data
     setPageNo(0);
     setHasMoreData(true);
+    setIsInitialLoad(true);
     fetchData(0, false);
-  }, [qrValue,wotype,flag,selectedFilter])
-);
+  }
+}, [qrValue]);
+
 
   const permissionToAdd =
     ppmWorkorder.some((p) => p.includes('C')) &&
@@ -155,6 +303,7 @@ useFocusEffect(
     setFilterVisible(false);
     setPageNo(0);
     setHasMoreData(true);
+    setIsInitialLoad(true); // Reset initial load state for new filter
   };
 
   const filteredWorkOrders =
@@ -175,6 +324,7 @@ useFocusEffect(
     setFlag((prev) => !prev);
     setPageNo(0);
     setHasMoreData(true);
+    setIsInitialLoad(true);
   };
 
   const handleLoadMore = () => {
@@ -193,6 +343,23 @@ useFocusEffect(
         <ActivityIndicator size="small" color={colors.icon} />
         <Text style={[styles.loadingText, { color: colors.text }]}>Loading more...</Text>
       </View>
+    );
+  };
+
+  const renderWorkOrderItem = ({ item, index }) => {
+    const itemId = getWorkOrderId(item);
+    const isRemoving = removingItems.has(itemId);
+    
+    return (
+      <AnimatedWorkOrderCard
+        workOrder={item}
+        previousScreen="Work Orders"
+        uuid={qrValue}
+        isRemoving={isRemoving}
+        onRemoveComplete={() => {
+          // This will be called when animation completes
+        }}
+      />
     );
   };
 
@@ -249,7 +416,10 @@ useFocusEffect(
         )}
       </View>
 
-      {loading ? (
+      {/* New Item Indicator */}
+      <NewItemIndicator isVisible={showNewItemIndicator} />
+
+      {loading && isInitialLoad ? (
         <View style={styles.loaderContainer}>
           <Loader />
         </View>
@@ -261,16 +431,15 @@ useFocusEffect(
       ) : (
         <FlatList
           data={filteredWorkOrders}
-          keyExtractor={(item, index) => `${item.wo?.['Sequence No'] || index}-${index}`}
-          renderItem={({ item }) => (
-            <WorkOrderCard workOrder={item} previousScreen="Work Orders" uuid={qrValue} />
-          )}
+          keyExtractor={(item, index) => `${getWorkOrderId(item)}-${index}`}
+          renderItem={renderWorkOrderItem}
           contentContainerStyle={styles.contentContainer}
           refreshing={refreshing}
           onRefresh={onRefresh}
           onEndReached={handleLoadMore}
           onEndReachedThreshold={0.1}
           ListFooterComponent={renderFooter}
+          removeClippedSubviews={false} // Prevent issues with animations
         />
       )}
 
@@ -333,6 +502,32 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 8,
     fontSize: 14,
+  },
+  newItemIndicator: {
+    position: 'absolute',
+    top: 80,
+    right: 20,
+    backgroundColor: '#E8F5E8',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    zIndex: 1000,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  newItemText: {
+    color: '#4CAF50',
+    fontSize: 12,
+    fontWeight: '600',
+    marginLeft: 6,
   },
 });
 

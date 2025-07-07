@@ -58,6 +58,8 @@ const HomeStack = () => (
     <Stack.Screen name="AddWo" component={RequestServiceTabs} />
     <Stack.Screen name="BuggyListTopTabs" component={BuggyListTopTabs} />
     <Stack.Screen name="NewScanPageWo" component={NewScanPage} />
+     <Stack.Screen name="RaiseChecklistComplaint" component={NewComplaintPage} />
+
   </Stack.Navigator>
 );
 
@@ -352,8 +354,6 @@ const MainNavigation = () => {
           setPpmWorkorder(perms.filter((p) => p.startsWith('PPM_WRK.')).map((p) => p.split('.')[1]));
           setComplaintPermissions(perms.filter((p) => p.startsWith('COM.')).map((p) => p.split('.')[1]));
           setCloseComplaintPermission(perms.filter((p) => p.startsWith('RESCLS.')).map((p) => p.split('.')[1]));
-
-          
           setInstructionPermissions(perms.filter((p) => p.startsWith('PPM_IST.')).map((p) => p.split('.')[1]));
         }
       } catch (error) {

@@ -46,7 +46,6 @@ fetchReq: async (url, method, data, headers, params) => {
   }
 
   const response = await fetch(url, conf);
-  console.log(response, '📥 Raw Response');
 
   if (!response.ok) {
     console.error('❌ Error in response:', response.statusText);
@@ -54,7 +53,6 @@ fetchReq: async (url, method, data, headers, params) => {
   }
 
   const responseData = await response.json();
-  console.log('✅ Parsed Response:', responseData);
   return responseData;
 }
 }
