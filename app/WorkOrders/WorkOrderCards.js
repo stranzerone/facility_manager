@@ -2,321 +2,238 @@ import { useNavigation } from '@react-navigation/native';
 import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, Platform } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
-import { useSelector } from 'react-redux';
+// useSelector is imported but not used in this version. Remove if "AssignedTo" is not planned.
+// import { useSelector } from 'react-redux';
 import moment from 'moment';
 import { usePermissions } from '../GlobalVariables/PermissionsContext';
 
 const getStatusColor = (status) => {
   switch (status) {
-    case 'OPEN':
-      return '#4299E1';
-    case 'STARTED':
-      return '#ED8936';
-    case 'COMPLETED':
-      return '#48BB78';
-    case 'HOLD':
-      return '#ECC94B';
-    case 'CANCELLED':
-      return '#F56565';
-    case 'REOPEN':
-      return '#9F7AEA';
-    default:
-      return '#A0AEC0';
+    case 'OPEN': return '#3B82F6';
+    case 'STARTED': return '#F97316';
+    case 'COMPLETED': return '#22C55E';
+    case 'HOLD': return '#EAB308';
+    case 'CANCELLED': return '#EF4444';
+    case 'REOPEN': return '#8B5CF6';
+    default: return '#6B7280';
   }
 };
 
 const getPriorityColor = (priority) => {
   switch (priority) {
-    case 'Emergency':
-      return '#FF6B6B';
-    case 'High':
-      return '#FFA94D';
-    case 'Normal':
-      return '#1996D3';
-    default:
-      return 'gray';
+    case 'Emergency': return '#DC2626';
+    case 'High': return '#F59E0B';
+    case 'Normal': return '#0EA5E9';
+    default: return '#6B7280';
   }
 };
 
-const WorkOrderCard = React.memo(({ workOrder,previousScreen,type,uuid }) => {
+const WorkOrderCard = React.memo(({ workOrder, previousScreen, type, uuid }) => {
   const navigation = useNavigation();
-  const statusColor = getStatusColor(workOrder.wo.Status);
-  const priorityColor = getPriorityColor(workOrder.wo.Priority);
-  const users = useSelector((state) => state.users.data);
-  const teams = useSelector((state) => state.teams.data);
-  const [restricted,setRestricted]  = useState(false)
-  const [restrictedTime,setRestrictedTime]  = useState(0)
+  // Ensure workOrder and workOrder.wo exist and are objects, or provide defaults
+  const wo = workOrder?.wo || {};
+const as = workOrder?.as || {};
+  const statusColor = getStatusColor(wo.Status);
+  const priorityColor = getPriorityColor(wo.Priority);
+  const [restricted, setRestricted] = useState(false);
+  const [restrictedTime, setRestrictedTime] = useState(0);
 
-  
-    const { ppmAsstPermissions,instructionPermissions } = usePermissions();
-    const workOrderReadPermission = ppmAsstPermissions?.some((p) => p.includes("R"));
-  const getUserNames = (assignedIds) => {
-    if (!assignedIds || assignedIds.length === 0) {
-      return 'Team';
-    }
-
-    return assignedIds
-      .map((userId) => {
-        if (users[0] === 'success') {
-          const user = users[1]?.find((user) => user.user_id === userId);
-          return user ? user.name : null;
-        }
-        return 'User Not Found';
-      })
-      .join(', ');
-  };
-
-
-
-  const getTeamName = (assignedTeamIds) => {
-  
-    if (!assignedTeamIds || assignedTeamIds.length === 0) {
-      return null;
-    }
-  
-    return assignedTeamIds
-      .map((teamId) => {
-        if (teamId) {
-          // Find the team in the teams array based on teamId
-          const team = teams?.find((team) => team.t._ID === teamId);
-          return team ? team.t.Name : null;
-        }
-        return 'User Not Found';
-      })
-      .join(', ');
-  };
-  
-
-  
-
+  const { ppmAsstPermissions, instructionPermissions, nightMode } = usePermissions();
+  const workOrderReadPermission = ppmAsstPermissions?.some((p) => p.includes("R"));
 
   useEffect(() => {
-    // Get restriction time (in hours)
-    const delTime = workOrder.wo.wo_restriction_time; // Time in hours
-  
-    // Parse created time as UTC
-    const creTime = moment(workOrder.wo["Due Date"]);
-  
-    const currTime = moment(); // Get current local time
-  
-    const timeDiff = currTime.diff(creTime, 'minutes') / 60; // Calculate difference in minutes, then convert to hours
-  
-      
-    if (timeDiff >= delTime) {
-      setRestricted(true); // Set restricted if the time difference exceeds the restriction time
-      setRestrictedTime(timeDiff)
+    const delTime = wo.wo_restriction_time;
+    const dueDateStr = wo["Due Date"];
 
-     } else if(timeDiff < delTime){
-      setRestricted(false); // Set restricted if the time difference exceeds the restriction time
-      setRestrictedTime(delTime - timeDiff)
-     
-    }else{
-      setRestrictedTime(null)
-
-      setRestricted(false)
+    if (delTime === null || typeof delTime === 'undefined' || !dueDateStr) {
+      setRestricted(false);
+      setRestrictedTime(0);
+      return;
+    }
+    
+    // Ensure delTime is a number for calculations
+    if (typeof delTime !== 'number') {
+        console.warn("Restriction time (delTime) is not a number:", delTime);
+        setRestricted(false);
+        setRestrictedTime(0);
+        return;
     }
 
-    }, []);
+    const creTime = moment(dueDateStr);
+    if (!creTime.isValid()) {
+      console.warn("Invalid Due Date for restriction calculation:", dueDateStr);
+      setRestricted(false);
+      setRestrictedTime(0);
+      return;
+    }
 
+    const currTime = moment();
+    const timeDiff = currTime.diff(creTime, 'minutes') / 60; // Difference in hours
 
+    if (timeDiff >= delTime) {
+      setRestricted(true);
+      setRestrictedTime(timeDiff); // How long it has been restricted
+    } else {
+      setRestricted(false);
+      // How much time is left until restriction applies
+      setRestrictedTime(Math.max(0, delTime - timeDiff));
+    }
+  }, [wo.wo_restriction_time, wo["Due Date"]]); // Dependencies are correct
 
+  const workOrderClick = () => {
+    if (instructionPermissions?.some((permission) => permission.includes('R'))) {
+      if (workOrderReadPermission || uuid) {
+        navigation.navigate('BuggyListTopTabs', {
+          workOrder: wo.uuid, // Use wo.uuid
+          wo: wo,            // Pass the safer wo object
+          as: as,
+          previousScreen: previousScreen,
+          restricted: restricted,
+          restrictedTime: restrictedTime
+        });
+      } else {
+        navigation.navigate("NewScanPageWo");
+      }
+    }
+  };
 
+  const formatDateTime = (dateTimeInput) => {
+    if (!dateTimeInput) return 'N/A';
+    // Ensure dateTimeInput is converted to string for robust parsing
+    const dateTimeString = String(dateTimeInput);
 
+    // Replace space with T for better cross-platform Date parsing, if space exists
+    // Handles "YYYY-MM-DD HH:MM:SS" and "YYYY-MM-DDTHH:MM:SS"
+    const parsableDateString = dateTimeString.includes(" ") && !dateTimeString.includes("T")
+                               ? dateTimeString.replace(" ", "T")
+                               : dateTimeString;
 
+    const dateObj = new Date(parsableDateString);
+    if (isNaN(dateObj.getTime())) return 'Invalid Date'; // Check if date is valid
 
+    const year = dateObj.getFullYear();
+    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const day = String(dateObj.getDate()).padStart(2, '0');
+    const formattedTime = dateObj.toLocaleTimeString('en-US', {
+      hour: '2-digit', minute: '2-digit', hour12: true
+    }).toLowerCase();
+    return `${day}/${month}/${year} ${formattedTime}`;
+  };
 
-const workOrderClick=()=>{
-
-
-
-  if(instructionPermissions.some((permission) => permission.includes('R'))){
-
- if(workOrderReadPermission || uuid){
-    navigation.navigate('BuggyListTopTabs', {
-      workOrder: workOrder.wo.uuid,
-      wo: workOrder.wo,
-      previousScreen:previousScreen,
-      restricted:restricted,
-      restrictedTime:restrictedTime
-    });
-  }else{
-    navigation.navigate("QRCode", {
-      screen: "NewScanPage",
-      params: { screenType: "OW" },
-    })  }
+  const fontSize = Platform.OS === 'ios' ? 13 : 12;
+  const largeFontSize = Platform.OS === 'ios' ? 16 : 15;
   
-  }
-}
+const cardBgColor = workOrderReadPermission || uuid 
+  ? nightMode 
+    ? 'rgba(25, 150, 211, 0.12)' 
+    : 'rgba(25, 150, 211, 0.06)' 
+  : nightMode
+    ? 'rgba(150, 150, 150, 0.2)'  // greyish for night mode
+    : 'rgba(200, 200, 200, 0.2)'; // greyish for day mode
 
-function formatDateTime(dateTimeString) {
-  if (!dateTimeString) return 'N/A';
+  
+  const textColor = nightMode ? '#E0E7FF' : '#1E3A8A';
+  const iconColor = nightMode ? '#93C5FD' : '#3B82F6';
+  const bubbleRgb = '25, 150, 211';
 
-  // Convert "2025-04-01 11:00:00" to a Date object
-  const dateObj = new Date(dateTimeString.replace(" ", "T")); // Ensure proper format for Date parsing
-
-  if (isNaN(dateObj)) return 'Invalid Date';
-
-  // Extract YYYY, MM, DD
-  const year = dateObj.getFullYear();
-  const month = String(dateObj.getMonth() + 1).padStart(2, '0'); // Months are 0-based
-  const day = String(dateObj.getDate()).padStart(2, '0');
-
-  // Format time as HH:MM am/pm
-  const formattedTime = dateObj.toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: true
-  }).toLowerCase();
-
-  return `${year}/${month}/${day} ${formattedTime}`;
-}
+  const sequenceNo = wo['Sequence No'];
+  const woName = wo.Name || 'Unnamed Work Order';
+  const woStatus = wo.Status;
+  const woPriority = wo.Priority;
+  const woDueDate = wo['Due Date'];
+  const woRestrictionTime = wo.wo_restriction_time;
 
 
-  const fontSize = Platform.OS === 'ios' ? 13 : 13;
-  const largeFontSize = Platform.OS === 'ios' ? 16 : 18;
   return (
     <TouchableOpacity
-    className={`bg-white border p-4 rounded-md shadow-lg my-1 relative ${(workOrderReadPermission || uuid )?"bg-white":"bg-gray-200"}`}
-    style={{ borderColor: 'darkblue',
-     }}
-    onPress={workOrderClick}
- 
-  >
+      style={{
+        backgroundColor: cardBgColor,
+        padding: 16,
   
-      {/* Work Order ID and status */}
-      <View className="flex-row justify-between items-center">
-        <View className="flex flex-row gap-4">
-    
+        borderRadius: 12,
+        marginVertical: 6,
+        marginHorizontal: 2,
+        position: 'relative',
+        overflow: 'hidden',
+      }}
+      onPress={workOrderClick}
+    >
+      <View style={{
+        position: 'absolute', top: 20, right: 30, width: 60, height: 60, borderRadius: 30,
+        backgroundColor: nightMode ? `rgba(${bubbleRgb}, 0.18)` : `rgba(${bubbleRgb}, 0.10)`,
+      }} />
+      <View style={{
+        position: 'absolute', bottom: 40, left: 20, width: 40, height: 40, borderRadius: 20,
+        backgroundColor: nightMode ? `rgba(${bubbleRgb}, 0.15)` : `rgba(${bubbleRgb}, 0.08)`,
+      }} />
+      <View style={{
+        position: 'absolute', top: 70, left: 90, width: 25, height: 25, borderRadius: 12.5,
+        backgroundColor: nightMode ? `rgba(${bubbleRgb}, 0.12)` : `rgba(${bubbleRgb}, 0.06)`,
+      }} />
 
-        <View className='flex flex-row'>
-        <Text className="text-gray-600 font-bold" style={{ fontSize }}>
-          ID : {workOrder.wo['Sequence No']} 
-        </Text>
-      {workOrder.wo['Sequence No'].split('-')[0] == 'BR' &&  <View className='bg-red-400 rounded-lg text-white ml-2 px-1'>
-          <Text className='text-white text-xs font-black'>breakdown</Text>
-        </View>}
-        {workOrder.wo['Sequence No'].split('-')[0] == 'HK' &&  <View className='bg-green-400 rounded-lg text-white ml-2 px-1'>
-          <Text className='text-white text-xs font-black'>HK</Text>
-        </View>}
+      <View style={{ zIndex: 1 }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', flexShrink: 1 }}>
+            <Text style={{ color: textColor, fontWeight: '600', fontSize, marginRight: 6 }}>
+              ID: {sequenceNo || 'N/A'}
+            </Text>
+            
+            {typeof sequenceNo === 'string' && sequenceNo.startsWith('BR') && (
+              <View style={{ backgroundColor: '#FEE2E2', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3, marginRight: 6 }}>
+                <Text style={{ color: '#B91C1C', fontSize: 10, fontWeight: 'bold' }}>Breakdown</Text>
+              </View>
+            )}
+            {typeof sequenceNo === 'string' && sequenceNo.startsWith('HK') && (
+              <View style={{ backgroundColor: '#D1FAE5', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3, marginRight: 6 }}>
+                <Text style={{ color: '#065F46', fontSize: 10, fontWeight: 'bold' }}>HK</Text>
+              </View>
+            )}
+            {woRestrictionTime != null && (
+              <Icon name={restricted ? "flag" : "clock-o"} size={14} color={restricted ? "#EF4444" : (nightMode ? '#9CA3AF' : '#6B7280')} />
+            )}
+          </View>
+
+          <View style={{ flexDirection: 'row', alignItems: 'center', paddingLeft: 4 }}>
+            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: statusColor, marginRight: 6 }} />
+            <Text style={{ color: statusColor, fontWeight: 'bold', fontSize: fontSize }}>
+              {typeof woStatus === 'string' ? woStatus.toUpperCase() : (woStatus || 'N/A')}
+            </Text>
+          </View>
         </View>
-        {workOrder.wo.wo_restriction_time && restricted ?
 
-               <Icon name="flag" size={16} color="red"  />
-       
-       :  workOrder.wo.wo_restriction_time ?
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+          <Icon name="cogs" size={fontSize + 1} color={iconColor} style={{ marginRight: 8 }} />
+        <Text
+  style={{
+    color: textColor,
+    fontWeight: 'bold',
+    fontSize: largeFontSize,
+    textAlignVertical:'center',
+    flex: 1,
+  }}
+  numberOfLines={2}
+  ellipsizeMode="tail"
+>
+  {woName}
+</Text>
 
-
-<Icon name="clock-o" size={16} color="gray"  />:
-null
-
-}
         </View>
-    
-        <View className="flex-row items-center">
-          <View
-            style={{
-              width: 7,
-              height: 7,
-              borderRadius: 6,
-              backgroundColor: statusColor,
-              marginRight: 4,
-              shadowColor: statusColor,
-              shadowOffset: { width: 0, height: 0 },
-              shadowOpacity: 0.7,
-              shadowRadius: 6,
-              elevation: 4,
-            }}
-          />
-          <Text className="font-extrabold" style={{ fontSize, color: statusColor }}>
-            {workOrder.wo.Status}
+
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+          <Icon name="calendar-check-o" size={fontSize + 1} color={iconColor} style={{ marginRight: 8 }} />
+          <Text style={{ color: textColor, fontWeight: '600', fontSize, flex: 1 }}>
+             {formatDateTime(woDueDate)}
           </Text>
         </View>
       </View>
 
-      {/* Work Order Name */}
-      <View className="flex-row items-center my-2">
-        <Icon name="cogs" size={fontSize} color="#074B7C" />
-        <Text className="text-blue-800 font-bold ml-2" style={{ fontSize: largeFontSize }}>
-          {workOrder.wo.Name || 'Unnamed Work Order'}
-        </Text>
-      </View>
-
-{/* Assigned To */}
-{(users[0] !== "error" && workOrder.wo.Assigned) || workOrder.wo.AssignedTeam ? (
-  <View className="flex flex-row">
-    <View className="flex-row w-1/3 items-center">
-      <Icon name="user" size={fontSize} color="#1996D3" />
-      <Text className="text-gray-700 font-extrabold ml-2" style={{ fontSize }}>
-        Assigned To :
-      </Text>
-    </View>
-    <View className="flex-row flex-wrap w-3/4 ml-2 mt-1">
-      {/* Assigned Users */}
-      {users[0] !== "error" &&
-        workOrder.wo.Assigned &&
-        getUserNames(workOrder.wo.Assigned).split(", ").map((name, index) => (
-          <View key={`user-${index}`} className="bg-blue-100 rounded-md flex items-center justify-center text-xs mb-1 ml-1 mr-1 px-2 py-0.5">
-            <Text className="font-semibold text-center" style={{ fontSize }}>
-  {name}
-</Text>
-
-          </View>
-        ))}
-      {/* Assigned Team */}
-      {workOrder.wo.AssignedTeam &&
-        getTeamName(workOrder.wo.AssignedTeam).split(", ").filter((name) => name && name.trim() !== "").map((name, index) => (
-          <View
-          key={`team-${index}`}
-          className="bg-green-200 rounded-md flex items-center justify-center text-xs mb-1 ml-1 mr-1 px-2 py-0.5"
-          style={{ maxWidth: 110 }} // Adjust maxWidth as needed
-        >
-          <Text
-            className="text-green-800 font-semibold"
-            style={{ fontSize }}
-       
-          >
-  {name}
-  </Text>
-        </View>
-        
-        ))}
-    </View>
-  </View>
-) : null}
-      
-
-
-      <View className="flex-row justify-between items-center">
-        <View className="flex-row items-center">
-          <Icon name="calendar" size={fontSize} color="#1996D3" />
-          <Text className="text-gray-700 font-extrabold ml-2" style={{ fontSize }}>
-  {workOrder.wo['Due Date'] 
-    ? (/\d{2}:\d{2}/.test(workOrder.wo['Due Date']) 
-        ?formatDateTime(workOrder.wo['Due Date'])
-        : `${workOrder.wo['Due Date']} 12:00 AM`) 
-    : 'N/A'}
-</Text>
-
-        </View>
-      </View>
-
-      {/* Priority Badge */}
-      <View
-        style={{
-          position: 'absolute',
-          bottom: 0,
-          right: 0,
-          backgroundColor: priorityColor,
-          paddingVertical: 4,
-          paddingHorizontal: 8,
-          minWidth: 80,
-          borderBottomRightRadius: 5,
-          justifyContent: 'center',
-          alignItems: 'center',
-        }}
-      >
-        <Text className="font-black" style={{ fontSize, color: '#FFF' }}>
-          {workOrder.wo.Priority || 'Unknown Priority'}
+      <View style={{
+        position: 'absolute', bottom: 0, right: 0,
+        backgroundColor: priorityColor, paddingVertical: 6, paddingHorizontal: 12,
+        borderBottomRightRadius: 12, borderTopLeftRadius: 12, zIndex: 2
+      }}>
+        <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize }}>
+          {typeof woPriority === 'string' ? woPriority.toUpperCase() : (woPriority || 'NORMAL')}
         </Text>
       </View>
     </TouchableOpacity>

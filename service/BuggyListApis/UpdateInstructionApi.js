@@ -2,7 +2,7 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL } from '@env';
 
-export const UpdateInstructionApi = async ({id, value , remark,type,WoUuId}) => {
+export const UpdateInstructionApi = async (data) => {
 
   // Fetch user info from AsyncStorage
   const userInfo = await AsyncStorage.getItem('userInfo');
@@ -37,9 +37,9 @@ export const UpdateInstructionApi = async ({id, value , remark,type,WoUuId}) => 
     
  
    const   payload = {
-        id: id,      // Ensure this is the correct field your API expects
-        result: value ,// Ensure this is the correct field your API expects
-        remarks:remark
+        id: data.id,      // Ensure this is the correct field your API expects
+        result: data.value ,// Ensure this is the correct field your API expects
+        remarks:data.remarks
       };
     
 
@@ -58,8 +58,10 @@ export const UpdateInstructionApi = async ({id, value , remark,type,WoUuId}) => 
       const response = await axios.put(`${API_URL}/v3/inst`, payload, {  headers, withCredentials: true });
       // Check if the response is as expected
       if (response.data.status === 'success') {
+
         return true; // Return success
       } else {
+
         console.error('API response status was not success:', response.data);
         return false; // Return failure
       }

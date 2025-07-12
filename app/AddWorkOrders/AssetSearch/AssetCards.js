@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
-import GetAssets from '../../../service/AddWorkOrderApis/FetchAssests';
+import { workOrderService } from '../../../services/apis/workorderApis';
 
 const AssetCard = ({ searchQuery, onClose, onSelect }) => {
   const [assets, setAssets] = useState([]);
@@ -18,7 +18,7 @@ const AssetCard = ({ searchQuery, onClose, onSelect }) => {
           return;
         }
 
-        const data = await GetAssets(searchQuery);
+        const data = await workOrderService.getAsets(searchQuery);
         setAssets(data.data || []);
         setStatus('succeeded');
       } catch (error) {

@@ -2,6 +2,7 @@ import { useNavigation } from "@react-navigation/native";
 import React from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import FontAwesome from "react-native-vector-icons/FontAwesome";
+import { usePermissions } from "../../GlobalVariables/PermissionsContext";
 
 const getStatusColor = (status) => {
   switch (status) {
@@ -21,6 +22,7 @@ const getStatusColor = (status) => {
 
 const IRCard = ({ item, uuid }) => {
   const issue = item.issue || {};
+  const { nightMode } = usePermissions();
   
   const sequenceNo = issue["Sequence No"] || "N/A";
   const statusName = issue.Status || "Unknown";
@@ -30,20 +32,73 @@ const IRCard = ({ item, uuid }) => {
   
   const navigation = useNavigation();
   
+  // Dynamic styles based on night mode
+  const dynamicStyles = StyleSheet.create({
+    card: {
+      backgroundColor: nightMode ? "#1F2937" : "white",
+      borderRadius: 12,
+      marginBottom: 12,
+      flexDirection: "row",
+      overflow: "hidden",
+      // Enhanced shadows
+      elevation: 4,
+      shadowColor: nightMode ? "#000" : "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: nightMode ? 0.4 : 0.15,
+      shadowRadius: 6,
+    },
+    sequenceNumber: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: nightMode ? "#F9FAFB" : "#1E293B",
+    },
+    itemNames: {
+      fontSize: 13,
+      color: nightMode ? "#D1D5DB" : "#334155",
+      fontWeight: "500",
+      lineHeight: 18,
+      paddingLeft: 20,
+    },
+    footer: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingTop: 6,
+      borderTopWidth: 1,
+      borderTopColor: nightMode ? "#374151" : "#F1F5F9",
+    },
+    sequenceLabel: {
+      fontSize: 12,
+      color: nightMode ? "#9CA3AF" : "#64748B",
+      fontWeight: "500",
+      marginRight: 4,
+    },
+    itemLabel: {
+      marginLeft: 6,
+      fontSize: 12,
+      color: nightMode ? "#9CA3AF" : "#64748B",
+      fontWeight: "500",
+    },
+    dateText: {
+      marginLeft: 6,
+      fontSize: 12,
+      color: nightMode ? "#9CA3AF" : "#64748B",
+    },
+  });
+  
   return (
     <Pressable
       onPress={() => navigation.navigate("IrDetail", { item, uuid, issueUuid: issue.uuid })}
-      style={styles.card}
+      style={dynamicStyles.card}
     >
       {/* Status Indicator Line */}
-      <View style={[ { backgroundColor: statusColor }]} />
+      <View style={[styles.statusLine, { backgroundColor: statusColor }]} />
       
       <View style={styles.cardContent}>
         {/* Top Row: Sequence No + Status */}
         <View style={styles.header}>
           <View style={styles.sequenceContainer}>
-            <Text style={styles.sequenceLabel}></Text>
-            <Text style={styles.sequenceNumber}>{sequenceNo}</Text>
+            <Text style={dynamicStyles.sequenceLabel}></Text>
+            <Text style={dynamicStyles.sequenceNumber}>{sequenceNo}</Text>
           </View>
           
           <View style={[styles.statusPill, { backgroundColor: statusColor }]}>
@@ -54,18 +109,26 @@ const IRCard = ({ item, uuid }) => {
         {/* Middle: Item Names */}
         <View style={styles.itemSection}>
           <View style={styles.itemHeader}>
-            <FontAwesome name="cube" size={16} color="#64748B" />
-            <Text style={styles.itemLabel}>Items</Text>
+            <FontAwesome 
+              name="cube" 
+              size={14} 
+              color={nightMode ? "#9CA3AF" : "#64748B"} 
+            />
+            <Text style={dynamicStyles.itemLabel}>Items</Text>
           </View>
-          <Text style={styles.itemNames} numberOfLines={2} ellipsizeMode="tail">
+          <Text style={dynamicStyles.itemNames} numberOfLines={1} ellipsizeMode="tail">
             {itemNames}
           </Text>
         </View>
         
         {/* Bottom: Created Date */}
-        <View style={styles.footer}>
-          <FontAwesome name="calendar" size={14} color="#94A3B8" />
-          <Text style={styles.dateText}>{createdAt}</Text>
+        <View style={dynamicStyles.footer}>
+          <FontAwesome 
+            name="calendar" 
+            size={12} 
+            color={nightMode ? "#6B7280" : "#94A3B8"} 
+          />
+          <Text style={dynamicStyles.dateText}>{createdAt}</Text>
         </View>
       </View>
     </Pressable>
@@ -73,90 +136,42 @@ const IRCard = ({ item, uuid }) => {
 };
 
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: "white",
-    borderRadius: 12,
-    marginBottom: 12,
-    flexDirection: "row",
-    overflow: "hidden",
-    elevation: 1,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
   statusLine: {
-
+    width: 4,
   },
   cardContent: {
     flex: 1,
-    padding: 16,
+    padding: 12,
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: 8,
   },
   sequenceContainer: {
     flexDirection: "row",
     alignItems: "center",
   },
-  sequenceLabel: {
-    fontSize: 12,
-    color: "#64748B",
-    fontWeight: "500",
-    marginRight: 4,
-  },
-  sequenceNumber: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#1E293B",
-  },
   statusPill: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
   statusText: {
     color: "white",
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "700",
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
   itemSection: {
-    marginBottom: 12,
+    marginBottom: 8,
   },
   itemHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 4,
-  },
-  itemLabel: {
-    marginLeft: 6,
-    fontSize: 12,
-    color: "#64748B",
-    fontWeight: "500",
-  },
-  itemNames: {
-    fontSize: 14,
-    color: "#334155",
-    fontWeight: "500",
-    lineHeight: 20,
-    paddingLeft: 22,
-  },
-  footer: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: "#F1F5F9",
-  },
-  dateText: {
-    marginLeft: 6,
-    fontSize: 12,
-    color: "#64748B",
+    marginBottom: 3,
   },
 });
 

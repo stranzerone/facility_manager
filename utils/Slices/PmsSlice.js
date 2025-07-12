@@ -1,11 +1,11 @@
 // ./app/redux/pmsSlice.js
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import {GetAllPmsApi} from "../../service/PMS/GetAllPms"
+import { workOrderService } from '../../services/apis/workorderApis';
 // Thunk to fetch all Pms data from the API
 export const fetchAllPms = createAsyncThunk(
   'pms/fetchAllPms',
   async () => {
-    const response = await GetAllPmsApi(); // API call to fetch all Pms data
+    const response = await workOrderService.getAllPms(); // API call to fetch all Pms data
     return response.data; // Assuming the API response contains a list of Pms
   }
 );

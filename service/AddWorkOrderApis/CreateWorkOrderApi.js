@@ -38,11 +38,10 @@ export const submitWorkOrder = async (workOrderData) => {
       })
     };
 
-        const payload = {
+      const payload = {
       "Name": workOrderData.name,
       "Type": workOrderData.type,
       "Asset": workOrderData.asset?.Name || "", // If undefined, set it to an empty string
-          // "Assigned": workOrderData.user,
       "Due Date": workOrderData.dueDate,
       "Estimated Time": workOrderData.estimatedTime,
       "Priority": workOrderData.priority,

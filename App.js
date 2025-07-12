@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import {
-  View, Text, Platform, Modal, Image, TouchableOpacity, StyleSheet
+  View, Text, Platform, Modal, Image, TouchableOpacity, StyleSheet,
+  Linking,
+  Alert
 } from 'react-native';
 import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
@@ -9,12 +11,14 @@ import MainNavigation from './MainNavigation.js';
 import NfcManager from 'react-native-nfc-manager';
 import initializeOneSignal from './utils/GlobalFunctions/PushNotifications.js';
 import DynamicPopup from './app/DynamivPopUps/DynapicPopUpScreen.js';
+import Toast from 'react-native-toast-message'; // ✅ Required
+import { checkAppUpdate } from './utils/AppUpdateChecker.js';
+
 NfcManager.start();
 
 const App = () => {
   const [nfcEnabled, setNfcEnabled] = useState(null);
   const [showNfcModal, setShowNfcModal] = useState(false);
-
   const [modalVisible, setModalVisible] = useState(false);
   const [modalMessage, setModalMessage] = useState('');
   const [modelType, setModelType] = useState('warning');
@@ -36,6 +40,34 @@ const App = () => {
     initializeOneSignal();
   }, []);
 
+
+    const [showPopup, setShowPopup] = useState(false);
+
+  useEffect(() => {
+    const checkVersion = async () => {
+      const updateNeeded = await checkAppUpdate();
+      if (updateNeeded) {
+        setShowPopup(true);
+      }
+    };
+    checkVersion();
+  }, []);
+const redirectToPlayStore = () => {
+  const packageName = 'com.sumasamu.isocietyManagerAdmin'; // replace with your app's package name
+
+  if (Platform.OS === 'android') {
+    const url = `market://details?id=${packageName}`;
+
+    Linking.openURL(url).catch(() => {
+      // Fallback to web URL if Play Store app is not installed
+      const webUrl = `https://play.google.com/store/apps/details?id=${packageName}`;
+      Linking.openURL(webUrl).catch(() => {
+        Alert.alert('Error', 'Could not open Play Store');
+      });
+    });
+  }
+};
+
   const handleEnableNfc = () => {
     if (Platform.OS === 'android') {
       NfcManager.goToNfcSetting();
@@ -47,12 +79,13 @@ const App = () => {
     setShowNfcModal(false);
   };
 
+
   return (
     <Provider store={store}>
       <PersistGate loading={null} persistor={persistor}>
         <View style={{ flex: 1 }}>
           <MainNavigation />
-          
+
           {/* Tag read result popup */}
           {modalVisible && (
             <DynamicPopup
@@ -93,6 +126,23 @@ const App = () => {
               </View>
             </Modal>
           )}
+
+          
+      {showPopup && (
+        <DynamicPopup
+          visible={showPopup}
+          type="hint"
+          message={'A new version of the app is available. Click OK to download it from the Play Store.'}
+          onClose={() => setShowPopup(false)}
+          onOk={() => {
+            setShowPopup(false);
+            redirectToPlayStore();
+          }}
+        />
+      )}
+
+          {/* ✅ Toast Message Handler */}
+          <Toast />
         </View>
       </PersistGate>
     </Provider>

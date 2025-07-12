@@ -1,10 +1,47 @@
-import React, { useState, useEffect } from "react";
-import { View, Text, TextInput, TouchableOpacity, Alert } from "react-native";
-import { FontAwesome } from "@expo/vector-icons";
-import { UpdateWorkOrder } from "../../service/WorkOrderApis/UpdateWorkOrderApi";
-import { ScrollView } from "react-native";
-import { GetCategory } from "../../service/GetCategoryInfo";
-import useConvertToSystemTime from "../TimeConvertot/ConvertUtcToIst";
+import React, { useState, useEffect, useRef } from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  TextInput,
+  Alert,
+  Animated,
+  LayoutAnimation,
+  UIManager,
+  Platform,
+} from "react-native";
+import FontAwesome from "react-native-vector-icons/FontAwesome";
+import { workOrderService } from "../../services/apis/workorderApis";
+import { usePermissions } from "../GlobalVariables/PermissionsContext";
+import Tag from "./tag";
+
+// Enable LayoutAnimation for Android
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
+const RestrictionCard = ({ wo, restricted, restrictedTime, description, onUpdate }) => {
+  const { nightMode } = usePermissions();
+  const [delayReason, setDelayReason] = useState(wo.delay_reason || "");
+  const [showInput, setShowInput] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [category, setCategory] = useState("");
+  const [collapsed, setCollapsed] = useState(true);
+  const animatedHeight = useRef(new Animated.Value(0)).current;
+  const rotateAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const getCategoryInfo = async () => {
+      try {
+        const response = await workOrderService.getCategories();
+        const cat = response.data?.find((item) => item.uuid == wo.category_uuid);
+        setCategory(cat?.Name);
+      } catch (error) {
+        console.error(error);
+      }
+    };
+    getCategoryInfo();
+  }, []);
 
 const formatRestrictedTime = (time) => {
   const hours = Math.floor(time);
@@ -21,65 +58,40 @@ const formatRestrictedTime = (time) => {
     return `${minutes} minute${minutes > 1 ? "s" : ""} `;
   }
 };
-
-const RestrictionCard = ({ wo, restricted, restrictedTime, description, onUpdate }) => {
-  const [delayReason, setDelayReason] = useState(wo.delay_reason || ""); // Initialize with wo.delay_reason
-  const [showInput, setShowInput] = useState(false);
-  const [loading, setLoading] = useState(false);
- const [category,setCategory]  = useState('')
-
   const formattedTime = formatRestrictedTime(restrictedTime);
-  const GetCategoryInfo = async()=>{
-
-try{
-
-  const response = await GetCategory()
-
-const cat = response.data?.find((item)=>item.uuid == wo.category_uuid)
-setCategory(cat?.Name)
-
-}catch(error){
-  console.error(error)
-}
-  }
-
-
-
-
-
-  useEffect(()=>{
-    GetCategoryInfo()
-
-  },[])
-
-
-  function formatDateTime(dateTimeString) {
+  const formatDateTime = (dateTimeString) => {
     if (!dateTimeString) return 'N/A';
-  
-    // Convert "2025-04-01 11:00:00" to a Date object
-    const dateObj = new Date(dateTimeString.replace(" ", "T")); // Ensure proper format for Date parsing
-  
+    const dateObj = new Date(dateTimeString.replace(" ", "T"));
     if (isNaN(dateObj)) return 'Invalid Date';
-  
-    // Extract YYYY, MM, DD
     const year = dateObj.getFullYear();
-    const month = String(dateObj.getMonth() + 1).padStart(2, '0'); // Months are 0-based
+    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
     const day = String(dateObj.getDate()).padStart(2, '0');
-  
-    // Format time as HH:MM am/pm
     const formattedTime = dateObj.toLocaleTimeString('en-US', {
       hour: '2-digit',
       minute: '2-digit',
-      hour12: true
+      hour12: true,
     }).toLowerCase();
-  
     return `${year}/${month}/${day} ${formattedTime}`;
-  }
+  };
 
+  const toggleExpanded = () => {
+    // Configure smooth animation
+    LayoutAnimation.configureNext({
+      duration: 300,
+      create: { type: 'easeInEaseOut', property: 'opacity' },
+      update: { type: 'easeInEaseOut' },
+      delete: { type: 'easeInEaseOut', property: 'opacity' }
+    });
 
+    // Animate the chevron rotation
+    Animated.timing(rotateAnim, {
+      toValue: collapsed ? 1 : 0,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
 
-
-
+    setCollapsed(!collapsed);
+  };
 
   const uploadDelayReason = async () => {
     if (!delayReason.trim()) {
@@ -88,21 +100,10 @@ setCategory(cat?.Name)
     }
 
     setLoading(true);
-
     try {
-
-
-      // Send the update request to the API
-      const response = await UpdateWorkOrder(wo.uuid, delayReason);
-
-      // Ensure the response includes the updated delay reason and handle it
-      if (response && response.flag_delay_reason) {
-        setDelayReason(response.flag_delay_reason); // Update state with new delay reason
-      }
-
-      // Notify the parent component to refresh or update the data
-      if (onUpdate) onUpdate(); // Call the onUpdate prop function to refresh data
-
+      const response = await workOrderService.updateDelayResone(wo.uuid, delayReason);
+    
+     
       setShowInput(false);
       Alert.alert("Success", "Delay reason updated successfully.");
     } catch (error) {
@@ -112,127 +113,294 @@ setCategory(cat?.Name)
     }
   };
 
+  const textColor = nightMode ? "#eee" : "#074B7C";
+  const bgColor = nightMode ? "#1a1a1a" : "#87CEFA1A";
+  const borderColor = nightMode ? "#333" : "#e2e8f0";
+  const secondaryBg = nightMode ? "#2a2a2a" : "#ffffff";
+
+  const chevronRotation = rotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '180deg'],
+  });
+
   return (
-    <View className="w-full max-h-[50vh] p-2 rounded-md shadow-lg border-b-2 bg-blue-50 border-blue-200">
-      <View>
-      <View className="flex-row items-center mb-2">
-     
-        <FontAwesome name="tag" size={20} color="#074B7C" />
-        <Text className="ml-2 px-2 text-lg font-bold text-blue-900">{wo.Name}</Text>
-     </View>
-  
-
-      </View>
-
-      <View className="flex-row flex-wrap gap-2">
-        <View className="flex-row items-center bg-blue-200 px-1 py-1 rounded-md">
-          <FontAwesome name="id-badge" size={16} color="#074B7C" />
-          <Text className="ml-2 font-bold text-sm text-blue-800">{wo["Sequence No"]}</Text>
+    <View style={{
+      backgroundColor: bgColor,
+      borderColor: borderColor,
+      borderRadius: 12,
+      padding: 16,
+      marginBottom: 12,
+      position: 'relative',
+    }}>
+      {/* Header - Always visible */}
+      <View style={{ 
+        flexDirection: "column", 
+        alignItems: "flex-start", 
+        justifyContent: "center",
+        marginBottom: collapsed ? 8 : 12,
+        paddingBottom: collapsed ? 0 : 12,
+        borderBottomWidth: collapsed ? 0 : 1,
+        borderBottomColor: borderColor,
+        paddingRight: 40, // Space for the circular button
+      }}>
+        <View style={{ 
+          flexDirection: "row", 
+          alignItems: "center", 
+          marginBottom: 6,
+        }}>
+          <Text style={{ 
+            fontWeight: "900", 
+            fontSize: 16, 
+            color: textColor,
+            marginLeft: 8,
+            flex: 1,
+          }}>
+   {wo["Sequence No"]} - {wo.Name}
+          </Text>
         </View>
+        
+             {restricted && <View style={{
+                backgroundColor: secondaryBg,
+                width:"110%",
+                borderRadius: 8,
+                padding: 12,
+                marginBottom: 12,
+                borderWidth: 1,
+                borderColor: borderColor,
+              }}>
+                {!showInput  ? (
+                  <TouchableOpacity onPress={() => setShowInput(true)}>
+                    <Text style={{ 
+                      fontWeight: "600", 
+                      color: textColor,
+                      marginBottom: 4 
+                    }}>
+                      Delay Reason
+                    </Text>
+                    <Text style={{ 
+                      color: nightMode ? "#bbb" : "#64748b", 
+                      fontSize: 14,
+                      lineHeight: 20
+                    }}>
+                      <FontAwesome name="pencil" size={14} color="#3B82F6" />{" "}
+                      {delayReason || wo.flag_delay_reason || "Tap to enter delay reason..."}
+                    </Text>
+                  </TouchableOpacity>
+                ) : (
+                  <>
+                    <TextInput
+                      placeholder="Enter delay reason..."
+                      placeholderTextColor="#9ca3af"
+                      value={delayReason}
+                      onChangeText={setDelayReason}
+                      multiline
+                      style={{
+                        color: textColor,
+                        backgroundColor: nightMode ? "#2a2a2a" : "#fff",
+                        padding: 12,
+                                        width:"100%",
 
-{ category && <View className="flex-row items-center bg-green-200 px-1 py-1 rounded-md">
-<FontAwesome name="folder" size={16} color="#074B7C" />
-<Text className="ml-2 font-bold text-sm text-green-800">
-  {category?.length > 12 ? category.slice(0, 12) + "..." : category}
-</Text>
-</View>}
-
-
-        <View className="flex-row items-center bg-yellow-100 px-1 py-1 rounded-md">
-          <FontAwesome name="exclamation-circle" size={16} color="#074B7C" />
-          <Text className="ml-2 font-bold text-sm text-black">{wo.Type}</Text>
-        </View>
-
-        {wo.wo_restriction_time &&(
-          <View className={`flex-row items-center bg-white border-2 ${restricted?"border-red-400":"border-green-400"} px-1 py-1 rounded-md`}>
-            <FontAwesome name="clock-o" size={16} color="black" />
-            <Text className={`ml-2 font-black text-sm   ${restricted?"text-red-500":"text-green-500"}`} >{restricted?null:"In"} {formattedTime} {restricted?"ago":null}</Text>
+                        borderRadius: 8,
+                        borderColor: borderColor,
+                        borderWidth: 1,
+                        marginBottom: 10,
+                        minHeight: 60,
+                        textAlignVertical: 'top',
+                      }}
+                    />
+                    <View style={{ flexDirection: 'row', gap: 8 }}>
+                      <TouchableOpacity
+                        onPress={uploadDelayReason}
+                        disabled={loading}
+                        style={{
+                          backgroundColor: loading ? "#9ca3af" : "#074B7C",
+                          paddingVertical: 10,
+                          paddingHorizontal: 16,
+                          borderRadius: 6,
+                          flex: 1,
+                        }}
+                      >
+                        <Text style={{ 
+                          color: "#fff", 
+                          fontWeight: "600",
+                          textAlign: 'center'
+                        }}>
+                          {loading ? "Submitting..." : "Submit"}
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => setShowInput(false)}
+                        style={{
+                          backgroundColor: nightMode ? "#374151" : "#f3f4f6",
+                          paddingVertical: 10,
+                          paddingHorizontal: 16,
+                          borderRadius: 6,
+                        }}
+                      >
+                        <Text style={{ 
+                          color: nightMode ? "#d1d5db" : "#374151", 
+                          fontWeight: "600"
+                        }}>
+                          Cancel
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </>
+                )}
+              </View>}
+        {/* Quick status indicator when collapsed */}
+        {collapsed && restricted && (
+          <View style={{ 
+            flexDirection: 'row', 
+            alignItems: 'center',
+            justifyContent:"center",
+            marginTop: 4,
+          }}>
+            <FontAwesome name="stop-circle" size={14} color="#ef4444" />
+            <Text style={{ 
+              textAlign:'center',
+              color: "#ef4444", 
+              fontSize: 12, 
+              marginLeft: 4,
+              fontWeight: "500"
+            }}>
+              Restriction Applied
+            </Text>
+            
           </View>
+          
         )}
       </View>
 
-      {restricted && (
-        <View className="mt-2">
-          <View className="flex flex-row gap-1 items-center justify-center">
-            <FontAwesome name="stop-circle" size={20} color="red" />
-            <Text className="text-red-500 font-bold text-center">Restriction Applied</Text>
-          </View>
-
-          {/* Delay Reason Section */}
-          <View className="mt-2 flex-row items-center rounded-md px-4 py-4 bg-white">
-            {!showInput ? (
-        <View style={{ maxHeight: 60 }}>
-     
-          <ScrollView 
-      className="px-2" 
-      nestedScrollEnabled={true}  // Allow inner scroll separately
-      keyboardShouldPersistTaps="handled"
-      showsVerticalScrollIndicator={true}  // Make sure the scroll is visible
-    >
-      <TouchableOpacity onPress={() => setShowInput(true)} className="flex-1">
-            <Text className="font-black">Delay Reason</Text>
-            <Text className="text-gray-600 flex flex-row gap-2 mt-1 font-semibold">
-              <FontAwesome name="pencil" size={15} style={{ color: "#3B82F6" }} />
-              &nbsp;
-              {delayReason || wo.flag_delay_reason || "Enter delay reason..."}
-            </Text>
-          </TouchableOpacity>
-    </ScrollView>
-      </View>
-      
-            ) : (
-              <TextInput
-                className="flex-1 text-black"
-                placeholder="Enter delay reason..."
-                placeholderTextColor="#888"
-                value={delayReason}
-                onChangeText={setDelayReason}
+      {/* Expandable content */}
+      {!collapsed && (
+        <View style={{ paddingRight: 4 }}>
+          {/* Tags */}
+          <View style={{ 
+            flexDirection: "row", 
+            flexWrap: "wrap", 
+            gap: 2, 
+            marginBottom: 12 
+          }}>
+            <Tag icon="user" text={wo["Sequence No"]} nightMode={nightMode} bg="lightblue" />
+            {category && <Tag icon="folder" text={category} nightMode={nightMode} bg="#dcfce7" />}
+            <Tag icon="exclamation-circle" text={wo.Type} nightMode={nightMode} bg="#fef9c3" />
+            {wo.wo_restriction_time && (
+              <Tag
+                icon="clock-o"
+                text={restricted ? `${formattedTime} ago` : `In ${formattedTime}`}
+                nightMode={nightMode}
+                bg={restricted ? "#fee2e2" : "#dcfce7"}
+                color={restricted ? "#dc2626" : "#16a34a"}
               />
             )}
+          </View>
 
-            {showInput && (
-              <TouchableOpacity
-                onPress={uploadDelayReason}
-                className={`ml-2 px-3 py-1 rounded-md ${loading ? "bg-gray-400" : "bg-blue-600"}`}
-                disabled={loading}
-              >
-                <Text className="text-white font-bold">{loading ? "..." : "Submit"}</Text>
-              </TouchableOpacity>
+          {/* Restriction block */}
+          {restricted && (
+            <>
+              <View style={{ 
+                marginBottom: 12, 
+                flexDirection: "row", 
+                alignItems: "center", 
+                justifyContent: "flex-start" 
+              }}>
+                <FontAwesome name="stop-circle" size={18} color="#ef4444" />
+                <Text style={{ 
+                  color: "#ef4444", 
+                  fontWeight: "600", 
+                  marginLeft: 8 
+                }}>
+                  Restriction Applied
+                </Text>
+              </View>
+
+            </>
+          )}
+
+          {/* Footer */}
+          <View style={{ 
+            borderTopWidth: 1, 
+            borderTopColor: borderColor, 
+            paddingTop: 12 
+          }}>
+            {wo['Due Date'] && (
+              <View style={{ 
+                flexDirection: "row", 
+                alignItems: "center", 
+                marginBottom: 6 
+              }}>
+                <FontAwesome name="clock-o" size={14} color={nightMode ? "#9ca3af" : "#6b7280"} />
+                <Text style={{ 
+                  color: textColor, 
+                  fontWeight: "600", 
+                  marginLeft: 8 
+                }}>
+                  Due:
+                </Text>
+                <Text style={{ 
+                  color: nightMode ? "#d1d5db" : "#374151", 
+                  marginLeft: 6,
+                  fontSize: 14
+                }}>
+                  {/\d{2}:\d{2}/.test(wo['Due Date'])
+                    ? formatDateTime(wo['Due Date'])
+                    : `${wo['Due Date']} 12:00 AM`}
+                </Text>
+              </View>
+            )}
+            {description && (
+              <Text style={{ 
+                color: nightMode ? "#9ca3af" : "#6b7280", 
+                fontSize: 13, 
+                fontStyle: "italic", 
+                marginTop: 6,
+                lineHeight: 18
+              }}>
+                ** {description} **
+              </Text>
             )}
           </View>
         </View>
       )}
 
-<View className="mt-2 border-t border-gray-400 pt-2">
-  <View className="max-h-20 min-h-8"> 
-
-    <ScrollView 
-      className="px-2" 
-      nestedScrollEnabled={true}  
-      keyboardShouldPersistTaps="handled"
-      showsVerticalScrollIndicator={true}  
-    >
-{ wo['Due Date'] && <View className="flex flex-row items-center justify-start mr-2 space-x-2 font-bold">
-     <FontAwesome name="clock-o" size={16} color="gray" />
-     <Text className="text-gray-700 font-extrabold">Due at : </Text>
-          <Text className="text-gray-700 font-extrabold ml-2">
-     {wo['Due Date'] 
-    ? (/\d{2}:\d{2}/.test(wo['Due Date']) 
-        ?formatDateTime(wo['Due Date'])
-        : `${wo['Due Date']} 12:00 AM`) 
-    : 'N/A'}
+      {/* Circular toggle button - positioned at bottom right */}
+<TouchableOpacity
+  onPress={toggleExpanded}
+  style={{
+    position: 'absolute',
+    right: 12,
+    bottom: 12,
+    paddingHorizontal: 12,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#074B7C',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  }}
+>
+  <Animated.View
+    style={{
+      flexDirection: 'row',
+      alignItems: 'center',
+    }}
+  >
+    <Text style={{ color: '#fff', fontSize: 12, marginRight: 6 }}>
+      {!collapsed ? 'Hide Details' : 'Show Details'}
     </Text>
-</View>}
-      <Text className="text-sm text-left  font-bold text-gray-900">
-        ** {description} **
-      </Text>
-    </ScrollView>
-  </View>
-</View>
-
-
-
-
+    <FontAwesome 
+      name="chevron-down" 
+      size={10} 
+      color="#ffffff" 
+    />
+  </Animated.View>
+</TouchableOpacity>
     </View>
   );
 };

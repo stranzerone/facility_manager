@@ -12,22 +12,24 @@ import {
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { FontAwesome6 } from '@expo/vector-icons';
+import { usePermissions } from '../../GlobalVariables/PermissionsContext';
 
-const TaskInput = ({ onChangeName, onChangeDueDate, onChangeEstimatedTime,workOrderType,onChangeBreakDonwHours }) => {
+const TaskInput = ({ onChangeName, onChangeDueDate, onChangeEstimatedTime, workOrderType, onChangeBreakDonwHours }) => {
   const [name, setName] = useState('');
   const [estimatedTime, setEstimatedTime] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedDueDate, setSelectedDueDate] = useState(null); // Initialize as null
- const [breakdownHours,setBreakdownHours]  = useState('')
- const handleDateChange = (event, selectedDate) => {
-  setShowDatePicker(false);
-  if (event.type === "set" && selectedDate) {
-    const formattedDate = selectedDate.toISOString().split("T")[0]; // Extract YYYY-MM-DD
-    setSelectedDueDate(formattedDate); // Store only date
-    onChangeDueDate(formattedDate); // Pass only date to parent
-  }
-};
+  const [breakdownHours, setBreakdownHours] = useState('');
+  const { nightMode } = usePermissions();
 
+  const handleDateChange = (event, selectedDate) => {
+    setShowDatePicker(false);
+    if (event.type === "set" && selectedDate) {
+      const formattedDate = selectedDate.toISOString().split("T")[0]; // Extract YYYY-MM-DD
+      setSelectedDueDate(formattedDate); // Store only date
+      onChangeDueDate(formattedDate); // Pass only date to parent
+    }
+  };
 
   // Function to format date as DD-MM-YYYY
   const formatDate = (isoDate) => {
@@ -39,6 +41,8 @@ const TaskInput = ({ onChangeName, onChangeDueDate, onChangeEstimatedTime,workOr
     const year = date.getFullYear();
     return `${day}-${month}-${year}`;
   };
+
+  const styles = getStyles(nightMode);
 
   return (
     <KeyboardAvoidingView
@@ -53,13 +57,14 @@ const TaskInput = ({ onChangeName, onChangeDueDate, onChangeEstimatedTime,workOr
               <TextInput
                 style={[styles.input, styles.inputRow, { height: 50, width: 170 }]}
                 placeholder="Enter task name"
+                placeholderTextColor={nightMode ? "#9CA3AF" : "#6B7280"}
                 value={name}
                 onChangeText={setName}
                 onBlur={() => onChangeName(name)}
                 returnKeyType="done"
               />
-              <View className='flex-row items-center mt-[-13px]'>
-                <Text className='text-red-500 text-[10px] ml-1'>
+              <View style={styles.mandatoryContainer}>
+                <Text style={styles.mandatoryText}>
                   <FontAwesome6 name="star-of-life" size={8} color="red" /> mandatory
                 </Text>
               </View>
@@ -74,8 +79,8 @@ const TaskInput = ({ onChangeName, onChangeDueDate, onChangeEstimatedTime,workOr
                 <View style={[styles.dateContainer, styles.inputRow, { height: 50, width: 170 }]}>
                   <Text style={styles.dateText}>{formatDate(selectedDueDate)}</Text>
                 </View>
-                <View className='flex-row items-center mt-[-13px]'>
-                  <Text className='text-red-500 text-[10px] ml-1'>
+                <View style={styles.mandatoryContainer}>
+                  <Text style={styles.mandatoryText}>
                     <FontAwesome6 name="star-of-life" size={8} color="red" /> mandatory
                   </Text>
                 </View>
@@ -100,45 +105,43 @@ const TaskInput = ({ onChangeName, onChangeDueDate, onChangeEstimatedTime,workOr
               <TextInput
                 style={[styles.input, styles.inputRow, { height: 40, width: 170 }]}
                 placeholder="Estimated Hours"
+                placeholderTextColor={nightMode ? "#9CA3AF" : "#6B7280"}
                 value={estimatedTime}
                 onChangeText={setEstimatedTime}
                 keyboardType="numeric"
                 onBlur={() => onChangeEstimatedTime(estimatedTime)}
               />
             </View>
-            
           </View>
 
-
-  { workOrderType === "breakdown"  &&     
-    <View style={styles.row}>
-            <Text style={styles.label}>Breakdown Hours</Text>
-            <View>
-              <TextInput
-                style={[styles.input, styles.inputRow, { height: 40, width: 170 }]}
-                placeholder="Breakdown Hours"
-                value={breakdownHours}
-                onChangeText={setBreakdownHours}
-                keyboardType="numeric"
-                onBlur={() => onChangeBreakDonwHours(breakdownHours)}
-              />
-                 <View className='flex-row items-center mt-[-13px]'>
-                  <Text className='text-red-500 text-[10px] ml-1'>
+          {workOrderType === "breakdown" && (
+            <View style={styles.row}>
+              <Text style={styles.label}>Breakdown Hours</Text>
+              <View>
+                <TextInput
+                  style={[styles.input, styles.inputRow, { height: 40, width: 170 }]}
+                  placeholder="Breakdown Hours"
+                  placeholderTextColor={nightMode ? "#9CA3AF" : "#6B7280"}
+                  value={breakdownHours}
+                  onChangeText={setBreakdownHours}
+                  keyboardType="numeric"
+                  onBlur={() => onChangeBreakDonwHours(breakdownHours)}
+                />
+                <View style={styles.mandatoryContainer}>
+                  <Text style={styles.mandatoryText}>
                     <FontAwesome6 name="star-of-life" size={8} color="red" /> mandatory
                   </Text>
-    </View>
+                </View>
+              </View>
             </View>
- 
-          </View>
-          
-          }
+          )}
         </View>
       </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (nightMode) => StyleSheet.create({
   container: {
     flex: 1,
     display: 'flex',
@@ -159,16 +162,17 @@ const styles = StyleSheet.create({
     marginBottom: 5,
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#074B7C',
+    color: nightMode ? '#60A5FA' : '#074B7C',
   },
   input: {
-    borderColor: '#1996D3',
+    borderColor: nightMode ? '#4B5563' : '#1996D3',
     borderWidth: 1,
     width: '60%',
     borderRadius: 5,
     paddingHorizontal: 10,
     marginBottom: 15,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: nightMode ? '#374151' : '#FFFFFF',
+    color: nightMode ? '#E5E5E5' : '#000000',
   },
   inputRow: {
     flex: 1,
@@ -177,16 +181,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderColor: '#1996D3',
+    borderColor: nightMode ? '#4B5563' : '#1996D3',
     borderWidth: 1,
     borderRadius: 5,
     paddingHorizontal: 10,
     marginBottom: 15,
     height: 40,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: nightMode ? '#374151' : '#FFFFFF',
   },
   dateText: {
-    color: '#074B7C',
+    color: nightMode ? '#E5E5E5' : '#074B7C',
+  },
+  mandatoryContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: -13,
+  },
+  mandatoryText: {
+    color: '#EF4444',
+    fontSize: 10,
+    marginLeft: 4,
   },
 });
 

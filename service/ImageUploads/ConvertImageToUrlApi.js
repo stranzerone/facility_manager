@@ -49,7 +49,6 @@ export const uploadImageToServer = async (data, itemId, WoUuId,onlyUpload) => {
       },
     });
 
-    console.log(response.data,'this is response for upload')
     if(onlyUpload){
       return response.data
     }

@@ -1,148 +1,122 @@
 import React, { useState, useEffect } from 'react';
 import {
   View,
-  FlatList,
   Text,
+  ScrollView,
   StyleSheet,
   TouchableOpacity,
   Animated,
-  ScrollView,
   KeyboardAvoidingView,
   TouchableWithoutFeedback,
   Keyboard,
-  Dimensions
+  Dimensions,
+  Platform,
 } from 'react-native';
-import { GetInstructionsApi } from '../../service/BuggyListApis/GetInstructionsApi';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import Loader from '../LoadingScreen/AnimatedLoader';
 import ProgressPage from '../AssetDetails/ProgressBar';
 import CommentsPage from '../WoComments/WoCommentsScreen';
 import { FontAwesome5 } from '@expo/vector-icons';
-import { WorkOrderInfoApi } from '../../service/WorkOrderInfoApi';
 import CardRenderer from '../BuggyNewCardComp/CardsMainScreen';
-import { Platform } from 'react-native';
 import InfoCard from './InstructionDetails';
+import { workOrderService } from '../../services/apis/workorderApis';
+import { usePermissions } from '../GlobalVariables/PermissionsContext';
 
-const BuggyListPage = ({ uuid, wo ,restricted,restrictedTime,id,type,sequence,handleBuggyChange}) => {
+const BuggyListPage = ({ uuid, wo,as, restricted, restrictedTime, id, type, sequence, handleBuggyChange }) => {
   const [data, setData] = useState([]);
-  const [assetDescription, setAssetDescription] = useState(''); 
+  const [assetDescription, setAssetDescription] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
-  const [expanded, setExpanded] = useState(false); 
-  const [keyboardOffset, setKeyboardOffset] = useState(0);
+  const [expanded, setExpanded] = useState(false);
   const animation = useState(new Animated.Value(0))[0];
-  const [canComplete,setCancomplete]  = useState(false)
-  const navigate = useNavigation();
- 
+  const [canComplete, setCancomplete] = useState(false);
   const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
-  // Function to fetch buggy list data
-
-  const loadBuggyList = async () => {
-    try {
-      let result ;
-      if(sequence == 'HK'){
-       result = await GetInstructionsApi({WoUuId:uuid,type:"HW"});
-     
-
-      }else{
-       result = await GetInstructionsApi({WoUuId:uuid,type:"WO"});
-      }
-      if(result){
-        setData(result);
-
-      }else{
-        setData([])
-      }
-    } catch (error) {
-      setError(error.message || 'Something went wrong');
-    } finally {
-      setLoading(false)
-    }
-  };
-
-  // Function to fetch asset description
-  const loadAssetDescription = async () => {
-    try {
-      const response = await WorkOrderInfoApi(uuid); 
-      setAssetDescription(response[0].wo.Description || 'No description available.');
-    } catch (error) {
-      setError(error.message || 'Error fetching asset description.');
-    }
-  };
+  const [shouldRenderComments, setShouldRenderComments] = useState(false);
+  const navigation = useNavigation();
+  const { height } = Dimensions.get('screen');
+  const { nightMode } = usePermissions();
 
   useEffect(() => {
-    setLoading(true)
+    setLoading(true);
     loadBuggyList();
-    if(sequence !== "HK"){
-    loadAssetDescription(); 
-    }
+    if (sequence !== 'HK') loadAssetDescription();
   }, [uuid]);
 
-  // useFocusEffect(
-  //   React.useCallback(() => {
-  //     loadBuggyList(); 
-  //     loadAssetDescription(); 
-  //   }, [uuid])
-  // );
-
-  const handleRefreshData = async () => {
-    await loadBuggyList(); 
-  };
-
-  const renderCard = ({ item, index }) => (
-    <CardRenderer
-    restricted={restricted}
-      item={item}
-      onUpdateSuccess={handleRefreshData} 
-      index={index}
-      WoUuId={uuid}
-      wo={wo}
-    />
-  );
-
-
-
-
-
-
   useEffect(() => {
-    const showSubscription = Keyboard.addListener("keyboardDidShow", () => {
-      setIsKeyboardOpen(true);
-    });
-
-    const hideSubscription = Keyboard.addListener("keyboardDidHide", () => {
-      setIsKeyboardOpen(false);
-    });
-
+    const showSubscription = Keyboard.addListener('keyboardDidShow', () => setIsKeyboardOpen(true));
+    const hideSubscription = Keyboard.addListener('keyboardDidHide', () => setIsKeyboardOpen(false));
     return () => {
       showSubscription.remove();
       hideSubscription.remove();
     };
   }, []);
 
-  const toggleExpand = () => {
-    const finalValue = expanded ? 0 : 1; 
-    // setExpanded(!expanded);
-    handleBuggyChange(false)
-    Animated.timing(animation, {
-      toValue: finalValue,
-      duration: 100,
-      useNativeDriver: false, 
-    }).start();
+  useEffect(() => {
+    const timer = setTimeout(() => setShouldRenderComments(true), 0);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const loadBuggyList = async () => {
+    try {
+      let result = sequence === 'HK' ? [] : await workOrderService.getInstructionsForWo({
+        asset_uuid: wo.asset_uuid,
+        ref_uuid: uuid,
+        ref_type: 'WO',
+      });
+      setData(result?.data || []);
+    } catch (error) {
+      setError(error.message || 'Something went wrong');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const {height}  = Dimensions.get('screen')
+  const loadAssetDescription = async () => {
+    try {
+      const response = await workOrderService.getWoInfo(uuid);
+      setAssetDescription(response?.data[0]?.wo.Description || 'No description available.');
+    } catch (error) {
+      setError(error.message || 'Error fetching asset description.');
+    }
+  };
+
+  const handleRefreshData = async () => {
+    await loadBuggyList();
+  };
+
+  const toggleExpand = () => {
+    handleBuggyChange(false);
+    Animated.timing(animation, {
+      toValue: expanded ? 0 : 1,
+      duration: 100,
+      useNativeDriver: false,
+    }).start(() => setExpanded(!expanded));
+  };
+
   const commentsHeight = animation.interpolate({
     inputRange: [0, 1],
-    outputRange: [0, height >= 800? height * 0.70 : height <= 800 ?height * 0.65 :height * 0.80], 
+    outputRange: [0, height >= 800 ? height * 0.7 : height * 0.65],
     extrapolate: 'clamp',
   });
 
+  const groupBy = (array, key) =>
+    array?.reduce((result, current) => {
+      const groupKey = current[key] || 'Ungrouped';
+      (result[groupKey] ||= []).push(current);
+      return result;
+    }, {});
 
+if (loading) return (
+  <View 
+    className={`flex items-center justify-center flex-1 ${nightMode ? "bg-black" : "bg-white"}`}
+  >
+    <Loader />
+  </View>
+);
   if (error) {
     return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>{error}</Text>
+      <View style={[styles.errorContainer, { backgroundColor: nightMode ? '#121212' : '#f0f4f7' }]}>
+        <Text style={[styles.errorText, { color: nightMode ? '#FF6B6B' : 'red' }]}>{error}</Text>
         <TouchableOpacity onPress={handleRefreshData} style={styles.refreshButton}>
           <Text style={styles.refreshButtonText}>Try Again</Text>
         </TouchableOpacity>
@@ -150,160 +124,141 @@ const BuggyListPage = ({ uuid, wo ,restricted,restrictedTime,id,type,sequence,ha
     );
   }
 
-
-
-
-  if (loading) {
-    return <Loader />;
-  }
-
-  const groupBy = (array, key) => {
-    return array.reduce((result, currentItem) => {
-      const groupKey = currentItem[key] || 'Ungrouped';
-      if (!result[groupKey]) {
-        result[groupKey] = [];
-      }
-      result[groupKey].push(currentItem);
-      return result;
-    }, {});
-  };
-  
-
-
   return (
-    <View
-    style={{ flex: 1}}
-    >
-  
-      <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
-        <ScrollView style={styles.container} contentContainerStyle={styles.scrollViewContainer}>
-       
+    <View style={[styles.pageWrapper, { backgroundColor: nightMode ? '#121212' : '#f0f4f7' }]}>
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <ScrollView
+          style={styles.container}
+          contentContainerStyle={styles.scrollViewContainer}
+          keyboardShouldPersistTaps="handled"
+        >
+          <InfoCard wo={wo} restricted={restricted} restrictedTime={restrictedTime} description={assetDescription} />
 
-          <View>
-            <InfoCard  wo={wo} restricted={restricted} restrictedTime={restrictedTime}  description={assetDescription}/>
-          </View>
-          {/* List of Cards */}
-          {data.length !== 0 ? (
-  Object.entries(groupBy(data, 'group')).map(([groupName, items], groupIndex) => (
-    <View key={groupIndex} style={{ marginBottom: 20 }}>
-    <View style={styles.groupHeader}>
-  <FontAwesome5 name="folder-open" size={18} color="#074B7C" style={styles.groupIcon} />
-  <Text style={styles.groupTitle}>{groupName}</Text>
-</View>
-
-      {items.map((item, index) => (
-        <CardRenderer
-          key={item.id}
-          restricted={restricted}
-          item={item}
-          onUpdateSuccess={handleRefreshData}
-          index={index}
-          WoUuId={uuid}
-          wo={wo}
-        />
-      ))}
-    </View>
-  ))
-) : (
-  <View style={styles.emptyContainer}>
-    <Text style={styles.emptyText}>No instructions available.</Text>
-  </View>
-)}
-
-          
-          {/* Comments Section */}
-      
-
-          {/* Bottom Controls */}
+          {data.length ? (
+            Object.entries(groupBy(data, 'group')).map(([groupName, items], groupIndex) => (
+<View
+  key={groupIndex}
+  style={{
+    marginBottom: 20,
+    paddingBottom: 0,
+backgroundColor: groupIndex % 2 === 1 
+  ? (nightMode ? '#1C1C2E' : '#87CEFA26') 
+  : 'transparent',
+    borderRadius: 10,
+    paddingTop: 1,
+  }}
+>
+                <View
+                  style={[
+                    styles.groupHeader,
+                  ]}
+                >
+                  <FontAwesome5 name="folder-open" size={18} color={nightMode ? '#E5E5EA' : '#074B7C'} style={styles.groupIcon} />
+                  <Text style={[styles.groupTitle, { color: nightMode ? '#E5E5EA' : '#074B7C' }]}>{groupName}</Text>
+                </View>
+                {items.map((item, index) => (
+                  <CardRenderer
+                    key={item.id}
+                    restricted={restricted}
+                    item={item}
+                    as={as}
+                    onUpdateSuccess={handleRefreshData}
+                    index={index}
+                    WoUuId={uuid}
+                    wo={wo}
+                  />
+                ))}
+              </View>
+            ))
+          ) : (
+            <View style={styles.emptyContainer}>
+              <Text style={[styles.emptyText, { color: nightMode ? '#888' : 'red' }]}>No instructions available.</Text>
+            </View>
+          )}
         </ScrollView>
       </TouchableWithoutFeedback>
 
-      {/* Comment input button */}
-      <View style={[styles.expandButtonContainer,{bottom:isKeyboardOpen?0:65}]}  >
-      
-        <Animated.View style={[styles.commentsContainer, { height: commentsHeight,overflow:"scroll" }]}>
-        <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={{ flex: 1 }}
-    > 
+      {/* Comments Drawer */}
+      {shouldRenderComments && (
+        <Animated.View
+          style={[
+            styles.commentsContainer,
+            { height: commentsHeight, backgroundColor: nightMode ? '#1E1E1E' : 'white' },
+          ]}
+        >
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
             <CommentsPage WoUuId={uuid} />
-</KeyboardAvoidingView>
-
+          </KeyboardAvoidingView>
         </Animated.View>
-     
+      )}
+
+      {/* Expand Button */}
+      <View style={[styles.expandButtonContainer, { bottom: isKeyboardOpen ? 0 : 8 }]}>
         <TouchableOpacity style={styles.expandButton} onPress={toggleExpand}>
-          <FontAwesome5 name={expanded ? 'comments' : 'comments'} size={20} color="#fff" />
+          <FontAwesome5 name="comments" size={20} color="#fff" />
         </TouchableOpacity>
       </View>
-    { !expanded && <View    className="w-[70%]"  style={[styles.progressBarContainer, { right:canComplete?70:0,left:canComplete?null:40, bottom: isKeyboardOpen?0: 57 }]}>
-      <ProgressPage 
-      id={id}
-        type={type}
-        uuid={uuid}
-        data={data}
-        wo={wo}
-        canComplete={setCancomplete}
-        sequence={sequence}
-        restricted={restricted}
-      />
-      </View>}
+
+      {/* Progress bar */}
+      {!expanded && (
+        <View
+          style={[
+            styles.progressBarContainer,
+            {
+              left:canComplete ?0: 40,
+              right:0,
+              bottom: isKeyboardOpen ? 0 : 0,
+            },
+          ]}
+        >
+          <ProgressPage
+            id={id}
+            type={type}
+            uuid={uuid}
+            data={data}
+            wo={wo}
+            canComplete={setCancomplete}
+            sequence={sequence}
+            restricted={restricted}
+          />
+        </View>
+      )}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
+  pageWrapper: {
+    flex: 1,
+  },
   container: {
     flex: 1,
-    backgroundColor: '#f0f4f7',
-    paddingBottom:100
   },
   scrollViewContainer: {
-    paddingBottom: 100,
-  },
-  listContainer: {
-    padding: 10,
-    paddingBottom: 0,
-  },
-  expandButtonContainer: {
-// bottom: 80,
-left:10,
-  },
-  groupTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: 'black',
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    backgroundColor: '#e1ecf4',
-    borderRadius: 5,
-    marginHorizontal: 1,
-    marginTop: 10,
+    paddingBottom:60,
+        paddingBottom:300,
+
   },
   groupHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f0f6fb',
     paddingVertical: 8,
     paddingHorizontal: 12,
-    marginTop: 12,
+    marginTop: 0,
     marginHorizontal: 12,
     borderRadius: 10,
   },
-  
-  groupIcon: {
-    marginRight: 8,
-  },
-  
   groupTitle: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#074B7C',
   },
-  
-  
-  progressBarContainer:{
-   marginBottom: Platform.OS === "ios"?  10:null,
-   marginLeft: Platform.OS ==="ios" ? 20 :null,
+  groupIcon: {
+    marginRight: 8,
+  },
+  expandButtonContainer: {
+    position: 'absolute',
+    left: 10,
+    zIndex: 100,
   },
   expandButton: {
     width: 50,
@@ -315,21 +270,14 @@ left:10,
   },
   commentsContainer: {
     position: 'absolute',
-    bottom: 5,
-    height:"100%",
+    bottom: 0,
     width: '95%',
-    backgroundColor: 'white',
     overflow: 'hidden',
   },
-  descriptionContainer: {
-    backgroundColor: 'white',
-    padding: 10,
-    marginBottom: 10,
-  },
-  assetDescription: {
-    fontSize: 14,
-    color: '#333',
-    textAlign: 'center',
+  progressBarContainer: {
+    position: 'absolute',
+    marginBottom: 0,
+    marginLeft: Platform.OS === 'ios' ? 20 : null,
   },
   errorContainer: {
     flex: 1,
@@ -337,18 +285,28 @@ left:10,
     alignItems: 'center',
   },
   errorText: {
-    color: 'red',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  refreshButton: {
+    marginTop: 12,
+    backgroundColor: '#074B7C',
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  refreshButtonText: {
+    color: '#fff',
+    fontWeight: '600',
   },
   emptyContainer: {
-    flex:1,
-    textAlign:'center',
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingTop: 32,
   },
   emptyText: {
-    textAlign:"center",
-    color: 'red',
-    textAlignVertical:'center'
+    textAlign: 'center',
   },
 });
 

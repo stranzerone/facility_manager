@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import {View,
+import {
+  View,
   Text,
   TouchableOpacity,
   Modal,
@@ -10,21 +11,22 @@ import {View,
   ScrollView,
   Keyboard,
   Image,
-  StyleSheet
+  StyleSheet,
+  Dimensions
 } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
-import { GetComplaintComments } from '../../service/RaiseComplaintApis/GetComplaintComments';
-import { PostMyComment } from '../../service/RaiseComplaintApis/PostMyComment';
-import { CloseComplaintApi } from '../../service/ComplaintApis/CloseComplaintApi';
-import { useNavigation, CommonActions } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import DynamicPopup from '../DynamivPopUps/DynapicPopUpScreen';
 import useConvertToIST from '../TimeConvertot/ConvertUtcToIst';
 import { usePermissions } from '../GlobalVariables/PermissionsContext';
 import CommentInput from './CommentInput';
 import { RenderComment } from './CommentCards';
 import ImageViewing from "react-native-image-viewing";
+import { complaintService } from '../../services/apis/complaintApis';
+
+
 const ComplaintCloseScreen = ({ route }) => {
-  const { complaint,category,creator } = route.params;
+  const { complaint, category, creator, location } = route.params;
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
   const [isOtpMode, setIsOtpMode] = useState(false);
@@ -33,16 +35,61 @@ const ComplaintCloseScreen = ({ route }) => {
   const [popupVisible, setPopupVisible] = useState(false);
   const [popupConfig, setPopupConfig] = useState({});
   const navigation = useNavigation();
-  const { complaintPermissions } = usePermissions();
+  const { complaintPermissions, nightMode,closeComplaintPermission } = usePermissions();
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [isImageVisible, setIsImageVisible] = useState(false);
+  // Theme configuration
+  const theme = {
+    light: {
+      background: '#F8FAFC',
+      cardBackground: '#FFFFFF',
+      textPrimary: '#1F2937',
+      textSecondary: '#6B7280',
+      textMuted: '#9CA3AF',
+      border: '#E5E7EB',
+      shadow: '#000000',
+      accent: '#3B82F6',
+      success: '#10B981',
+      warning: '#F59E0B',
+      error: '#EF4444',
+      gradientStart: '#3B82F6',
+      gradientEnd: '#1E40AF',
+      modalOverlay: 'rgba(0, 0, 0, 0.5)',
+      inputBackground: '#FFFFFF',
+      statusBadge: '#10B981',
+      categoryBadge: '#3B82F6',
+      userBadge: '#6B7280',
+      unitBadge: '#E5E7EB',
+    },
+    dark: {
+      background: '#0F172A',
+      cardBackground: '#1E293B',
+      textPrimary: '#F1F5F9',
+      textSecondary: '#CBD5E1',
+      textMuted: '#94A3B8',
+      border: '#334155',
+      shadow: '#000000',
+      accent: '#60A5FA',
+      success: '#34D399',
+      warning: '#FBBF24',
+      error: '#F87171',
+      gradientStart: '#1E40AF',
+      gradientEnd: '#0F172A',
+      modalOverlay: 'rgba(0, 0, 0, 0.8)',
+      inputBackground: '#334155',
+      statusBadge: '#34D399',
+      categoryBadge: '#60A5FA',
+      userBadge: '#64748B',
+      unitBadge: '#475569',
+    }
+  };
+
+  const currentTheme = nightMode ? theme.dark : theme.light;
+
+
   useEffect(() => {
     fetchComments();
   }, []);
-
-
-
-
 
   useEffect(() => {
     const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', () => {
@@ -59,22 +106,20 @@ const ComplaintCloseScreen = ({ route }) => {
     };
   }, []);
 
-
   const fetchComments = async () => {
     try {
-      const fetchedComments = await GetComplaintComments(complaint.id);
+      const fetchedComments = await complaintService.getComplaintComments(complaint.id);
       setComments(fetchedComments);
     } catch (error) {
       Alert.alert('Error', 'Failed to fetch comments. Please try again.');
     }
   };
 
-
   const handleAddComment = async (data) => {
     if (newComment.trim()) {
       try {
         setIsPosting(true);
-        await PostMyComment(complaint.id, data.remarks, data.file);
+        const response =   await complaintService.addComplaintComment(complaint.id, data.remarks, data.file);
         fetchComments();
         setNewComment('');
       } catch (error) {
@@ -96,7 +141,14 @@ const ComplaintCloseScreen = ({ route }) => {
         message: 'Are you sure you want to close this complaint?',
         onOk: async () => {
           try {
-            const response = await CloseComplaintApi(complaint);
+            const payload = {
+              ...complaint,
+              status: "Closed",
+            };
+            if (otp) {
+              payload.otp = otp;
+            }
+            const response = await complaintService.closeComplaint(payload);
             if (response.status === 'success') {
               setPopupConfig({
                 type: 'success',
@@ -104,18 +156,13 @@ const ComplaintCloseScreen = ({ route }) => {
               });
               setPopupVisible(true);
               setTimeout(() => {
-                navigation.dispatch(
-                  CommonActions.reset({
-                    index: 0,
-                    routes: [{ name: 'Service Request' }],
-                  })
-                );
+                navigation.goBack()
               }, 3000);
             } else {
               setPopupConfig({
                 type: 'error',
                 message: response.message || 'Failed to close the complaint.',
-                onOk:() => setPopupVisible(false)
+                onOk: () => setPopupVisible(false)
               });
               setPopupVisible(true);
             }
@@ -123,15 +170,13 @@ const ComplaintCloseScreen = ({ route }) => {
             setPopupConfig({
               type: 'error',
               message: 'An error occurred. Please try again.',
-              onOk:() => setPopupVisible(false)
+              onOk: () => setPopupVisible(false)
             });
             setPopupVisible(true);
-            navigation.goBack()
-
+                navigation.goBack()
           }
         },
         onCancel: () => setPopupVisible(false),
-        
       });
       setPopupVisible(true);
     }
@@ -141,23 +186,26 @@ const ComplaintCloseScreen = ({ route }) => {
     if (otp.length === 4) {
       setIsOtpMode(false);
       try {
-        const response = await CloseComplaintApi(complaint, otp);
+        const payload = {
+          ...complaint,
+          status: "Closed",
+        };
+        if (otp) {
+          payload.otp = otp;
+        }
+        const response = await complaintService.closeComplaint(payload);
         if (response.status === 'success') {
           setPopupConfig({
             type: 'success',
             message: 'Complaint closed successfully!',
           });
           setPopupVisible(true);
-          navigation.dispatch(
-            CommonActions.reset({
-              index: 0,
-              routes: [{ name: 'Service Request' }],
-            })
-          );
+                navigation.goBack()
+         
         } else {
           setPopupConfig({
             type: 'error',
-            message: <Text className='font-bold'>Incorrect OTP. Please check and try again.</Text>,
+            message: 'Incorrect OTP. Please check and try again.',
           });
           setPopupVisible(true);
         }
@@ -165,206 +213,415 @@ const ComplaintCloseScreen = ({ route }) => {
         setPopupConfig({
           type: 'error',
           message: 'An error occurred. Please try again.',
-          onOk:() => setPopupVisible(false)
+          onOk: () => setPopupVisible(false)
         });
         setPopupVisible(true);
-        
       }
     } else {
       Alert.alert('Error', 'Please enter a valid 4-digit OTP.');
     }
   };
 
-  
+  const dynamicStyles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: currentTheme.background,
+    },
+    card: {
+      backgroundColor: currentTheme.cardBackground,
+      borderRadius: 20,
+      padding: 20,
+      marginBottom: 16,
+      shadowColor: currentTheme.shadow,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: nightMode ? 0.3 : 0.1,
+      shadowRadius: 8,
+      elevation: nightMode ? 8 : 3,
+      borderWidth: nightMode ? 1 : 0,
+      borderColor: currentTheme.border,
+    },
+    textPrimary: {
+      color: currentTheme.textPrimary,
+      fontSize: 16,
+      fontWeight: '600',
+    },
+    textSecondary: {
+      color: currentTheme.textSecondary,
+      fontSize: 14,
+      fontWeight: '500',
+    },
+    textMuted: {
+      color: currentTheme.textMuted,
+      fontSize: 12,
+    },
+    badge: {
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 20,
+      alignSelf: 'flex-start',
+    },
+    statusBadge: {
+      backgroundColor: currentTheme.statusBadge,
+    },
+    categoryBadge: {
+      backgroundColor: currentTheme.categoryBadge,
+    },
+    userBadge: {
+      backgroundColor: currentTheme.userBadge,
+    },
+    unitBadge: {
+      backgroundColor: currentTheme.unitBadge,
+    },
+    modalContent: {
+      backgroundColor: currentTheme.cardBackground,
+      borderRadius: 20,
+      padding: 24,
+      margin: 20,
+      shadowColor: currentTheme.shadow,
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.3,
+      shadowRadius: 12,
+      elevation: 10,
+    },
+    input: {
+      backgroundColor: currentTheme.inputBackground,
+      borderColor: currentTheme.border,
+      borderWidth: 1,
+      borderRadius: 12,
+      padding: 16,
+      fontSize: 16,
+      color: currentTheme.textPrimary,
+      textAlign: 'center',
+    },
+    button: {
+      borderRadius: 12,
+      paddingVertical: 12,
+      paddingHorizontal: 24,
+      minWidth: 100,
+      alignItems: 'center',
+    },
+    closeButton: {
+      borderRadius: 25,
+      paddingVertical: 12,
+      paddingHorizontal: 24,
+      minWidth: 150,
+      alignItems: 'center',
+    },
+  });
 
   return (
     <KeyboardAvoidingView
-      className="flex-1"
+      style={dynamicStyles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-         <ScrollView>
-      <View className="flex-1 bg-gray-50 p-4 pb-48">
-        {/* Complaint Details */}
-        <View className="bg-white p-4 rounded-lg shadow-md mb-4 relative">
-        <View>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        <View style={{ flex: 1, padding: 16, paddingBottom: 200 }}>
+          {/* Enhanced Complaint Details Card */}
+          <View >
+            {/* Image Section with Enhanced Styling */}
+            {complaint.img_src && (
+              <View style={{ marginBottom: 16 }}>
+                <TouchableOpacity onPress={() => setIsImageVisible(true)}>
+                  <Image
+                    source={{ uri: complaint.img_src }}
+                    style={{
+                      width: '100%',
+                      height: 200,
+                      borderRadius: 16,
+                      resizeMode: 'cover',
+                    }}
+                  />
+                  <View style={{
+                    position: 'absolute',
+                    top: 8,
+                    right: 8,
+                    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                    borderRadius: 20,
+                    padding: 8,
+                  }}>
+                    <FontAwesome name="expand" size={16} color="white" />
+                  </View>
+                </TouchableOpacity>
 
-        {complaint.img_src && (
-  <>
-    {/* Clickable Image */}
-    <TouchableOpacity onPress={() => setIsImageVisible(true)}>
-      <Image 
-        source={{ uri: complaint.img_src }} 
-        style={{ width: '100%', height: 200, resizeMode: 'cover', borderRadius: 10 }} 
-      />
-    </TouchableOpacity>
+                {isImageVisible && (
+                  <ImageViewing
+                    images={[{ uri: complaint.img_src }]}
+                    imageIndex={0}
+                    visible={isImageVisible}
+                    onRequestClose={() => setIsImageVisible(false)}
+                  />
+                )}
+              </View>
+            )}
 
-    {/* Zoomable Image Modal */}
-    {isImageVisible && (
-      <ImageViewing
-        images={[{ uri: complaint.img_src }]}
-        imageIndex={0}
-        visible={isImageVisible}
-        onRequestClose={() => setIsImageVisible(false)}
-      />
-    )}
-  </>
-)}
+            {/* Header Section with Complaint Number and Status */}
+            <View style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              backgroundColor: nightMode ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.05)',
+              borderRadius: 16,
+              padding: 16,
+              marginBottom: 16,
+            }}>
+              <View>
+                <Text style={[dynamicStyles.textMuted, { marginBottom: 4 }]}>
+                  Complaint No.
+                </Text>
+                <Text style={[dynamicStyles.textPrimary, { fontSize: 18, fontWeight: 'bold', color: currentTheme.accent }]}>
+                  {complaint.com_no}
+                </Text>
+              </View>
+              <View style={[dynamicStyles.badge, dynamicStyles.statusBadge]}>
+                <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 12 }}>
+                  {complaint.status}
+                </Text>
+              </View>
+            </View>
 
-</View>
-<View className="flex flex-row bg-gray-100 justify-between p-2 rounded-lg items-center mt-2">
-<Text className="text-blue-500 text-lg font-bold py-2">{complaint.com_no}</Text>
-
-<Text className="bg-green-400 rounded-full text-white font-extrabold px-2 py-1">{complaint.status}</Text>
-
-</View>
-
-
-
-<View>
-
-
-<View className="flex-row items-center mb-3 mt-1">
-        <Text style={styles.text} className=" text-gray-600 w-24 font-semibold ">Category  :</Text>
-        <Text 
-  className="bg-blue-400 rounded-md text-sm text-white font-semibold max-w-[75%] px-2 py-1"
-  numberOfLines={1}
-  ellipsizeMode="tail"
->
-  {category}
-</Text>
-
-      </View>
-  { creator &&    <View className="flex-row items-center mb-3">
-  <Text  style={styles.text} className="text-base text-gray-600 w-34 font-semibold">Created By : </Text>
-  
-  <View className="flex-row bg-gray-600 rounded-lg items-center px-3 py-1">
-    <FontAwesome name="user" size={14} color="white" className="mr-1" />
-    <Text className="text-sm text-white font-bold ml-1">{creator}</Text>
-  </View>
-</View>}
-
-</View>
-
-
-
-
-
-{complaint && (
-  <View className="flex justify-between gap-2 items-start mt-2">
-    
-    {/* Display Unit */}
- { complaint?.display_unit_no &&  <View className="flex-row rounded-lg items-center py-1">
-      {/* <FontAwesome name="map-marker" size={16} color="#D32F2F" className="mr-2" /> */}
-      <Text> Display Unit : </Text>
-      <Text className="bg-gray-200 rounded-md text-black font-bold ml-1 px-2">
-        {complaint.display_unit_no || 'N/A'}
+            {/* Category and Creator Section */}
+<View style={{ marginBottom: 16, backgroundColor: nightMode ? '#1f2937' : '#f9fafb', padding: 12, borderRadius: 12 }}>
+  {/* Nature */}
+  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+    <FontAwesome name="tag" size={16} color={currentTheme.accent} style={{ marginRight: 8 }} />
+    <Text style={[dynamicStyles.textSecondary, { marginRight: 12 }]}>Nature:</Text>
+    <View style={{ backgroundColor: '#074B7C1A', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }}>
+        <Text style={{ color: '#1996D3', fontWeight: '600', fontSize: 12 }}>
+        {category?.name || 'N/A'}
       </Text>
     </View>
-}
-    {/* Reference Unit */}
- { complaint?.reference_unit_no  &&  <View className="flex-row rounded-lg items-center py-1">
-      {/* <FontAwesome name="link" size={16} color="#F57C00" className="mr-2" /> */}
-      <Text> Ref. Unit      : </Text>
-      <Text className="bg-gray-300 rounded-md text-black font-bold ml-1 px-2">
-        {complaint.reference_unit_no ? 
-        complaint.resource.reference_unit_no.slice(0, 10) + "..." : 'N/A'}
-      </Text>
-    </View>}
+  </View>
 
+  {/* Sub Nature */}
+  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+    <FontAwesome name="tag" size={16} color={currentTheme.accent} style={{ marginRight: 8 }} />
+    <Text style={[dynamicStyles.textSecondary, { marginRight: 12 }]}>Sub Nature:</Text>
+    <View style={{ backgroundColor: '#074B7C1A', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }}>
+        <Text style={{ color: '#1996D3', fontWeight: '600', fontSize: 12 }}>
+        {complaint?.sub_category || 'N/A'}
+      </Text>
+    </View>
+  </View>
+
+  {/* Location */}
+{location &&  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+    <FontAwesome name="map-marker" size={16} color={currentTheme.accent} style={{ marginRight: 8 }} />
+    <Text style={[dynamicStyles.textSecondary, { marginRight: 12 }]}>Location:</Text>
+    <View style={{ backgroundColor: '#E0F2FE', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }}>
+      <Text style={{ color: '#0369A1', fontWeight: '600', fontSize: 12 }}>
+        {location?.name || 'N/A'}
+      </Text>
+    </View>
+  </View>}
+
+  {/* Created By */}
+  {creator && (
+    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+      <FontAwesome name="user" size={16} color={currentTheme.accent} style={{ marginRight: 8 }} />
+      <Text style={[dynamicStyles.textSecondary, { marginRight: 12 }]}>Created By:</Text>
+      <View style={{ backgroundColor: '#1996D31A', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }}>
+        <Text style={{ color: '#1996D3', fontWeight: '600', fontSize: 12 }}>
+          {creator}
+        </Text>
+      </View>
+    </View>
+  )}
+</View>
+
+{/* Unit Information Section */}
+{(complaint?.display_unit_no || complaint?.reference_unit_no) && (
+  <View
+    style={{
+      backgroundColor: nightMode ? 'rgba(107,114,128,0.1)' : 'rgba(107,114,128,0.05)',
+      borderRadius: 12,
+      padding: 12,
+      marginBottom: 16,
+    }}
+  >
+    {/* Display Unit */}
+    {complaint?.display_unit_no && (
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+        <FontAwesome name="map-marker" size={14} color={currentTheme.textSecondary} style={{ marginRight: 8 }} />
+        <Text style={[dynamicStyles.textSecondary, { marginRight: 8 }]}>Display Unit:</Text>
+        <View style={{ backgroundColor: '#10B9811A', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }}>
+          <Text style={{ color: '#047857', fontWeight: '600', fontSize: 11 }}>
+            {complaint.display_unit_no}
+          </Text>
+        </View>
+      </View>
+    )}
+
+    {/* Reference Unit */}
+    {complaint?.reference_unit_no && (
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <FontAwesome name="link" size={14} color={currentTheme.textSecondary} style={{ marginRight: 8 }} />
+        <Text style={[dynamicStyles.textSecondary, { marginRight: 8 }]}>Ref. Unit:</Text>
+        <View style={{ backgroundColor: '#10B9811A', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }}>
+          <Text style={{ color: '#047857', fontWeight: '600', fontSize: 11 }}>
+            {(complaint.resource?.reference_unit_no || '').length > 12
+              ? complaint.resource.reference_unit_no.slice(0, 12) + '...'
+              : complaint.resource.reference_unit_no || 'N/A'}
+          </Text>
+        </View>
+      </View>
+    )}
   </View>
 )}
-
-
-
-<View style={styles.container}>
-<ScrollView 
-        style={styles.scrollView}
-        nestedScrollEnabled={true} // Allows inner scrolling in Android
-        keyboardShouldPersistTaps="handled" // Ensures taps work inside ScrollView
-        showsVerticalScrollIndicator={true} // Shows scrollbar
-      >
-      <View>
-        <Text style={styles.text}>{complaint.description}</Text>
-      </View>
-      </ScrollView>   
-   </View>   
-             <View className="flex-row mt-2">
-            <Text className="text-gray-600">Created on: </Text>
-            <Text className="text-black font-bold">{useConvertToIST(complaint.created_at)}</Text>
-          </View>
-          <View className="flex-row justify-end items-center mt-4">
-            {complaint.status !== 'Closed' && complaintPermissions.some((permission) => permission.includes('U')) && (
-              <TouchableOpacity
-                className="bg-blue-500 rounded-lg px-4 py-2"
-                onPress={handleCloseComplaint}
+            {/* Description Section */}
+            <View style={{
+              backgroundColor: nightMode ? 'rgba(148, 163, 184, 0.1)' : 'rgba(148, 163, 184, 0.05)',
+              borderRadius: 12,
+              padding: 16,
+              marginBottom: 16,
+              maxHeight: 120,
+            }}>
+              <Text style={[dynamicStyles.textSecondary, { marginBottom: 8, fontWeight: 'bold' }]}>
+                Description
+              </Text>
+              <ScrollView
+                nestedScrollEnabled={true}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={true}
               >
-                <Text className="text-white font-extrabold">Close Complaint</Text>
-              </TouchableOpacity>
+                <Text style={[dynamicStyles.textPrimary, { lineHeight: 20 }]}>
+                  {complaint.description}
+                </Text>
+              </ScrollView>
+            </View>
+
+            {/* Created Date */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+              <FontAwesome name="clock-o" size={14} color={currentTheme.textMuted} style={{ marginRight: 8 }} />
+              <Text style={dynamicStyles.textMuted}>Created on: </Text>
+              <Text style={[dynamicStyles.textSecondary, { fontWeight: 'bold' }]}>
+                {useConvertToIST(complaint.created_at)}
+              </Text>
+            </View>
+
+            {/* Close Button */}
+
+<TouchableOpacity
+  disabled={complaint.status === "Closed" || closeComplaintPermission.some((permission) => permission.includes('U'))}
+  className="p-3 text-center rounded-md"
+  style={{
+    backgroundColor: currentTheme.gradientStart,
+    opacity: (complaint.status === "Closed" || closeComplaintPermission.some((permission) => permission.includes('U'))) ? 0.5 : 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  }}
+  onPress={handleCloseComplaint}
+>
+  {(complaint.status === "Closed" || closeComplaintPermission.some((permission) => permission.includes('U'))) && (
+    <FontAwesome name="ban" size={14} color="#fff" style={{ marginRight: 6 }} />
+  )}
+  <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 16, textAlign: 'center' }}>
+    Close Complaint
+  </Text>
+</TouchableOpacity>
+
+          
+          </View>
+
+          {/* Enhanced Comments Section */}
+          <View className="mt-6">
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+              <FontAwesome name="comments" size={20} color={currentTheme.accent} style={{ marginRight: 8 }} />
+              <Text style={[dynamicStyles.textPrimary, { fontSize: 18, fontWeight: 'bold' }]}>
+                Comments ({comments.length})
+              </Text>
+            </View>
+
+            {comments.length > 0 ? (
+              comments.map((item, index) => (
+                <View key={index} style={{ marginBottom: 12 }}>
+                  <RenderComment item={item} nightMode={nightMode} />
+                </View>
+              ))
+            ) : (
+              <View style={{
+                alignItems: 'center',
+                paddingVertical: 32,
+                backgroundColor: nightMode ? 'rgba(148, 163, 184, 0.1)' : 'rgba(148, 163, 184, 0.05)',
+                borderRadius: 12,
+              }}>
+                <FontAwesome name="comment-o" size={32} color={currentTheme.textMuted} style={{ marginBottom: 8 }} />
+                <Text style={[dynamicStyles.textMuted, { fontSize: 14 }]}>
+                  No comments yet. Be the first to comment!
+                </Text>
+              </View>
             )}
           </View>
         </View>
-
-        {/* Comments List */}
-        <ScrollView className="flex-1">
-          <Text className="text-gray-900 text-lg font-bold mb-2">Comments</Text>
-
-          {/* Map over comments instead of FlatList */}
-          {comments.length > 0 ? (
-            comments.map((item, index) => (
-              <View key={index}>
-                <RenderComment item={item} />
-              </View>
-            ))
-          ) : (
-            <Text className="text-center text-gray-500 mt-4">No comments yet.</Text>
-          )}
-        </ScrollView>
-      </View>
       </ScrollView>
-            {/* Comment Input */}
-     
-      <View style={{ 
-  position: 'absolute', 
-  bottom: keyboardVisible ? 0 : 55,
-    left: 0, 
-  right: 0, 
-  padding: 8, 
-  borderTopWidth: 1, 
-  borderColor: '#d1d5db' 
-}}>
-      <CommentInput
-        value={newComment}
-        onChangeText={setNewComment}
-        onSubmit={handleAddComment}
-        isPosting={isPosting}
-      />
+
+      {/* Enhanced Comment Input */}
+      <View style={{
+        position: 'absolute',
+        bottom: keyboardVisible ? 100: 0,
+        left: 0,
+        right: 0,
+        backgroundColor: currentTheme.cardBackground,
+        borderTopWidth: 1,
+        borderTopColor: currentTheme.border,
+        paddingHorizontal: 1,
+        shadowColor: currentTheme.shadow,
+        shadowOffset: { width: 0, height: -2 },
+        shadowOpacity: nightMode ? 0.3 : 0.1,
+        shadowRadius: 4,
+        elevation: 5,
+      }}>
+        <CommentInput
+          value={newComment}
+          onChangeText={setNewComment}
+          onSubmit={handleAddComment}
+          isPosting={isPosting}
+          nightMode={nightMode}
+        />
       </View>
 
-      {/* OTP Modal */}
+      {/* Enhanced OTP Modal */}
       <Modal visible={isOtpMode} transparent animationType="slide">
-        <View className="flex-1 bg-opacity-20 bg-transparent justify-center items-center">
-          <View className="bg-[#094879] p-5 rounded-lg shadow-lg w-4/5">
-            <Text className="text-lg text-white font-bold mb-4">Enter OTP</Text>
+        <View style={{
+          flex: 1,
+          backgroundColor: currentTheme.modalOverlay,
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}>
+          <View style={dynamicStyles.modalContent}>
+            <View style={{ alignItems: 'center', marginBottom: 24 }}>
+              <FontAwesome name="lock" size={32} color={currentTheme.accent} style={{ marginBottom: 12 }} />
+              <Text style={[dynamicStyles.textPrimary, { fontSize: 20, fontWeight: 'bold', textAlign: 'center' }]}>
+                Enter OTP
+              </Text>
+              <Text style={[dynamicStyles.textMuted, { textAlign: 'center', marginTop: 4 }]}>
+                Please enter the 4-digit OTP to close this complaint
+              </Text>
+            </View>
+
             <TextInput
-              className="bg-white border border-gray-300 rounded-lg text-center w-full mb-4 px-3 py-2"
-              placeholder="Enter 4-digit OTP"
+              style={[dynamicStyles.input, { marginBottom: 24, fontSize: 18, letterSpacing: 4 }]}
+              placeholder="● ● ● ●"
+              placeholderTextColor={currentTheme.textMuted}
               keyboardType="numeric"
               maxLength={4}
               value={otp}
               onChangeText={setOtp}
             />
-            <View className="flex-row justify-between">
+
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
               <TouchableOpacity
-                className="bg-gray-500 rounded-lg px-4 py-2"
+                style={[dynamicStyles.button, { backgroundColor: currentTheme.textMuted }]}
                 onPress={() => setIsOtpMode(false)}
               >
-                <Text className="text-white font-semibold">Cancel</Text>
+                <Text style={{ color: 'white', fontWeight: '600' }}>Cancel</Text>
               </TouchableOpacity>
+
               <TouchableOpacity
-                className="bg-blue-500 rounded-lg px-4 py-2"
+                style={[dynamicStyles.button, { backgroundColor: currentTheme.accent }]}
                 onPress={handleOtpSubmit}
               >
-                <Text className="text-white font-semibold">Submit</Text>
+                <Text style={{ color: 'white', fontWeight: '600' }}>Submit</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -376,24 +633,11 @@ const ComplaintCloseScreen = ({ route }) => {
         <DynamicPopup
           {...popupConfig}
           onClose={() => setPopupVisible(false)}
+          nightMode={nightMode}
         />
       )}
     </KeyboardAvoidingView>
- 
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    maxHeight: 120, // Adjust height to fit about 4 lines
-    overflow: 'hidden',
-  },
-  scrollView: {
-    padding: 2,
-  },
-  text: {
-    fontSize: Platform.OS === 'ios' ? 14 : 15, // Reduce size by 20% only on iOS
-  },
-});
 
 export default ComplaintCloseScreen;

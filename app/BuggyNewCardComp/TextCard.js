@@ -6,26 +6,45 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  StyleSheet,
+  Image,
+  TouchableOpacity,
 } from "react-native";
 import RemarkCard from "./RemarkCard";
-import styles from "../BuggyListCardComponets/InputFieldStyleSheet";
-import { UpdateInstructionApi } from "../../service/BuggyListApis/UpdateInstructionApi";
+import styles from "./styles";
 import Icon from "react-native-vector-icons/FontAwesome";
 import useConvertToSystemTime from "../TimeConvertot/ConvertUtcToIst";
+import { workOrderService } from "../../services/apis/workorderApis";
+import { usePermissions } from "../GlobalVariables/PermissionsContext";
+import CheckboxCardHeader from "./TopRow";
 
-const TextCard = ({ item, onUpdate, editable, type }) => {
+const TextCard = ({ item, onUpdate, editable, type,wo,as }) => {
+  const { nightMode } = usePermissions();
   const [value, setValue] = useState(item.result || "");
-  const updatedTime =useConvertToSystemTime(item?.updated_at)
+  const updatedTime = useConvertToSystemTime(item?.updated_at);
+
+  const backgroundColor = editable
+    ? value
+      ? nightMode ? "#254D32" : "#DFF6DD"
+      : nightMode ? "#1F1F1F" : "#FFFFFF"
+    : value
+      ? nightMode ? "#1F3F2B" : "#DCFCE7"
+      : nightMode ? "#121212" : "#E5E7EB";
+
+
+  const textColor = nightMode ? "#E5E5EA" : "#1F2937";
+  const inputBG = nightMode ? "#2C2C2E" : "#F9FAFB";
+  const inputText = nightMode ? "#F5F5F5" : "#111827";
+
   const handleBlur = async () => {
     try {
       const payload = {
         id: item.id,
-        value: value.trim(),
+        result: value.trim(),
         WoUuId: item.ref_uuid,
-        image: false,
       };
 
-      await UpdateInstructionApi(payload);
+     const response =  await workOrderService.updateInstruction(payload);
       onUpdate();
     } catch (error) {
       console.error("Error updating instruction:", error);
@@ -34,58 +53,49 @@ const TextCard = ({ item, onUpdate, editable, type }) => {
   };
 
   return (
-    <View
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={{ flex: 1 }}
-    >
-      <View
-        style={[
-          styles.inputContainer,
-          editable?value? { backgroundColor: "#DFF6DD" } :{backgroundColor:"white"}:value?{ backgroundColor: "#DCFCE7" } : { backgroundColor: "#E5E7EB" }, // Light green if a value is selected
+    <KeyboardAvoidingView  style={{ flex: 1 }}>
+      <View style={[styles.inputContainer, { backgroundColor }]} className="p-3 border border-gray-200 rounded-md mb-3 shadow-sm">
 
-        ]}
-      >
-     <View className="flex-row p-2">
-      <Text className="font-bold  text-xl mr-2">{item.order}.</Text>
-      
-      <Text style={styles.title}>{item.title}</Text>
+        {/* Header Section */}
+<CheckboxCardHeader
+  item={item}
+    as={as}
 
-      </View>
+  wo={wo}
+  nightMode={nightMode}
+  updatedTime={updatedTime}
+/>
+        {/* Title */}
+        <View className="flex-row items-start p-2">
+          <Text className="font-bold text-md mr-2" style={{ color: textColor }}>{item.order}.</Text>
+          <Text style={[styles.title, { color: textColor }]}>{item.title}</Text>
+        </View>
+
+        {/* Input or Result */}
         {editable ? (
           <TextInput
-            style={styles.inputContainer}
+            style={[styles.inputContainer, {
+              backgroundColor: inputBG,
+              color: inputText,
+              height:35,
+              padding: 8,
+              borderRadius: 6,
+            }]}
             value={value}
             onChangeText={setValue}
             keyboardType={type === "number" ? "numeric" : "default"}
             onBlur={handleBlur}
             placeholder={type === "number" ? "Enter Numerical Value" : "Enter your text"}
+            placeholderTextColor={nightMode ? "#A1A1AA" : "#9CA3AF"}
           />
         ) : (
-          <Text style={styles.inputContainer}>{item.result}</Text>
+          <Text style={[styles.inputContainer, { color: textColor }]}>{item.result}</Text>
         )}
 
+        {/* Remarks */}
         <RemarkCard item={item} editable={editable} />
-
-     
-<View className="flex-1 bg-transparent justify-end  px-4 py-2 mt-4 h-8">
-
-   { item.result || item?.data?.optional ?  
-    <View >
-{item.result && updatedTime &&  <Text className="text-gray-500 text-[11px]  font-bold">
-   Updated at : {updatedTime}
-  </Text>}
-
-          </View>:null}
-          {item?.data?.optional && (
-            <View className="flex-row justify-end gap-1 items-center absolute bottom-2 right-0">
-              <Icon name="info-circle" size={16} color="red" />
-              <Text className="text-xs text-red-800 font-bold mr-2">Optional</Text>
-            </View>
-                  )}
-          </View>
-  
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 };
 

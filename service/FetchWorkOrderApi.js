@@ -56,7 +56,7 @@ export const fetchServiceRequests = async (selectedFilter,flag,page) => {
     const response = await axios.get(`${API_URL}/v3/workorder/filter`, { params,headers,withCredentials: true });
 
     // Check the response data
-    const data = response.data.data;
+    const data = response.data;
     // Return the data if it's available, otherwise return false
     if (Array.isArray(response.data.data)) {
       return data;

@@ -1,5 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { createContext, useContext, useState } from 'react';
 
 // Create a context for permissions
 const PermissionsContext = createContext();
@@ -10,44 +9,16 @@ export const PermissionsProvider = ({ children }) => {
   const [complaintPermissions, setComplaintPermissions] = useState([]);
   const [instructionPermissions, setInstructionPermissions] = useState([]);
   const [issueRequestPermission, setIssueRequestPermission] = useState([]);
-  const [ppmWorkorder,setPpmWorkorder] = useState([])
- const [complaintFilter,setComplaintFilter]  = useState("Open")
-  const loadPermissions = async () => {
-    try {
-      const savedPermissions = await AsyncStorage.getItem('userInfo');
-     
-      if (savedPermissions) {
-        const userInfo = JSON.parse(savedPermissions); // Parse the stored string into an object
+  const [closeComplaintPermission,setCloseComplaintPermission] = useState([])
+  const [ppmWorkorder, setPpmWorkorder] = useState([]);
+  const [nightMode, setNightMode] = useState();
+  const [complaintFilter, setComplaintFilter] = useState("Open");
+  const [queueLength,setQueueLength] = useState(0)
+  const [syncTime,setSyncTime]  = useState(0)
+  const [syncStatus,setSyncStatus]  = useState(false)
+  const [fetchingOffline,setFetchingOffline]  = useState(false)
+  // 🆕 Queue status state
 
-        if (userInfo.permissions) {
-          // const filteredPermissions = userInfo.permissions
-          //   .filter(item => item.startsWith('PPM_WOV.'))
-          //   .map(item => item.split('.')[1]);
-
-          //   console.log(filteredPermissions,"filteredpermissions1")
-          // setPpmAsstPermissions(filteredPermissions);
-
-          // const filteredComplaintPermissions = userInfo.permissions
-          //   .filter(item => item.startsWith('COM.'))
-          //   .map(item => item.split('.')[1]);
-          //   console.log(filteredComplaintPermissions,"filteredpermissions2")
-
-          // setComplaintPermissions(filteredComplaintPermissions);
-
-          // const filteredInstructionPermissions = userInfo.permissions
-          //   .filter(item => item.startsWith('PPM_IST.'))
-          //   .map(item => item.split('.')[1]);
-
-          //   console.log(filteredInstructionPermissions,"filteredpermissions3")
-
-            
-          // setInstructionPermissions(filteredInstructionPermissions);
-        }
-      }
-    } catch (error) {
-      console.error('Failed to load permissions:', error);
-    }
-  };
 
   return (
     <PermissionsContext.Provider
@@ -58,13 +29,24 @@ export const PermissionsProvider = ({ children }) => {
         complaintFilter,
         ppmWorkorder,
         issueRequestPermission,
+        nightMode,
+        queueLength,
+        syncStatus,
+        syncTime,
+        fetchingOffline,
+        closeComplaintPermission,
+        setCloseComplaintPermission,
+        setFetchingOffline,
+        setSyncTime,
+        setSyncStatus,
+        setQueueLength,
         setComplaintFilter,
         setPpmAsstPermissions,
         setComplaintPermissions,
         setInstructionPermissions,
-        loadPermissions,
         setPpmWorkorder,
         setIssueRequestPermission,
+        setNightMode
       }}
     >
       {children}

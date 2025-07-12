@@ -1,7 +1,58 @@
 {
   "expo": {
-    "name": "c",
-    "slug": "c",
-    "version": "1.0.0"
+    "name": "Facility Manager --technican",
+    "slug": "facilityM",
+    "version": "1.0.2",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "platforms": [
+      "ios",
+      "android"
+    ],
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "plugins": [
+      [
+        "onesignal-expo-plugin",
+        {
+          "mode": "production"
+        }
+      ]
+    ],
+    "ios": {
+      "bundleIdentifier": "com.sumasamu.isocietyManagerAdmin",
+      "buildNumber": "1.0.3",
+      "supportsTablet": true,
+      "infoPlist": {
+        "UIBackgroundModes": [
+          "remote-notification",
+          "remote-notification"
+        ],
+        "NSCameraUsageDescription": "This app uses the camera for scanning QR codes and capturing images.",
+        "NSPhotoLibraryUsageDescription": "This app accesses your photo library to select and upload photos.",
+        "NSPhotoLibraryAddUsageDescription": "This app saves captured images to your photo library.",
+        "NSLocationWhenInUseUsageDescription": "This app uses your location to assist with facility tracking.",
+        "NSMicrophoneUsageDescription": "This app might use the microphone for communication purposes.",
+        "NFCReaderUsageDescription": "This app uses NFC to read and manage facility tags.",
+        "NSDocumentsFolderUsageDescription": "This app uses document storage to upload and manage files.",
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "com.sumasamu.isocietyManagerAdmin",
+      "versionCode": 2
+    },
+    "extra": {
+      "eas": {
+        "projectId": "5f29bf81-8533-40a0-a8dc-f1e03652d8b2"
+      }
+    }
   }
 }

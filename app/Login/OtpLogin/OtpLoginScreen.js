@@ -15,12 +15,14 @@ import {
 import { otpLoginApi } from '../../../service/LoginWithOtp/LoginWithOtpApi';
 import otpSvg from '../../../assets/SvgImages/otp.png'; // Ensure the path to your image is correct
 import DynamicPopup from '../../DynamivPopUps/DynapicPopUpScreen'; // Import DynamicPopup
+import { usePermissions } from '../../GlobalVariables/PermissionsContext';
 
 const PhoneNumberPage = ({ navigation }) => {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [loading, setLoading] = useState(false); // Track loading state
   const [popupVisible, setPopupVisible] = useState(false); // State for controlling popup visibility
   const [popupMessage, setPopupMessage] = useState(''); // State for storing popup message
+  const { nightMode } = usePermissions();
 
   const handleSendOtp = async () => {
     if (phoneNumber.length < 1) {
@@ -55,37 +57,79 @@ const PhoneNumberPage = ({ navigation }) => {
     }
   };
 
+  // Dynamic styles based on night mode
+  const dynamicStyles = StyleSheet.create({
+    container: {
+      ...styles.container,
+      backgroundColor: nightMode ? '#121212' : '#f8f9fa',
+    },
+    topContainer: {
+      ...styles.topContainer,
+      backgroundColor: nightMode ? '#1996D3' : '#1996D3',
+    },
+    bottomContainer: {
+      ...styles.bottomContainer,
+      backgroundColor: nightMode ? '#1565C0' : '#1996D3',
+    },
+    headingOTP: {
+      ...styles.headingOTP,
+      color: nightMode ? '#ffffff' : '#074B7C',
+    },
+    paraOTP: {
+      ...styles.paraOTP,
+      color: nightMode ? '#b0b0b0' : '#6c757d',
+    },
+    input: {
+      ...styles.input,
+      backgroundColor: nightMode ? '#2a2a2a' : 'white',
+      color: nightMode ? '#ffffff' : '#074B7C',
+      borderBottomColor: nightMode ? '#1565C0' : '#1996D3',
+    },
+    sendOtpButton: {
+      ...styles.sendOtpButton,
+      backgroundColor: nightMode ? '#1565C0' : '#1996D3',
+    },
+    sendOtpButtonDisabled: {
+      ...styles.sendOtpButtonDisabled,
+      backgroundColor: nightMode ? '#424242' : '#b0c4de',
+    },
+  });
+
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={dynamicStyles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined} // Adjusts for iOS; use 'height' for Android
     >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={dynamicStyles.container}>
           {/* Top Blue Container */}
-          <View style={styles.topContainer} />
+          <View style={dynamicStyles.topContainer} />
 
           <View style={styles.imageUriContainer}>
             <Image source={otpSvg} style={styles.imageUri} resizeMode="contain" />
           </View>
 
           <View style={styles.textContainer}>
-            <Text style={styles.headingOTP}>OTP VERIFICATION</Text>
-            <Text style={styles.paraOTP}>
+            <Text style={dynamicStyles.headingOTP}>OTP VERIFICATION</Text>
+            <Text style={dynamicStyles.paraOTP}>
               Enter OTP for Verification for direct Login to the Dashboard
             </Text>
           </View>
 
           <View style={styles.inputContainer}>
             <TextInput
-              style={styles.input}
+              style={dynamicStyles.input}
               placeholder="Enter Phone Number Or Email"
+              placeholderTextColor={nightMode ? '#888888' : '#999999'}
               minLength={1}
               value={phoneNumber}
               onChangeText={setPhoneNumber}
             />
             <TouchableOpacity
-              style={[styles.sendOtpButton, loading && styles.sendOtpButtonDisabled]}
+              style={[
+                dynamicStyles.sendOtpButton, 
+                loading && dynamicStyles.sendOtpButtonDisabled
+              ]}
               onPress={handleSendOtp}
               disabled={loading} // Disable the button while loading
             >
@@ -105,7 +149,7 @@ const PhoneNumberPage = ({ navigation }) => {
           />
 
           {/* Bottom Blue Container */}
-          {/* <View style={styles.bottomContainer} /> */}
+          {/* <View style={dynamicStyles.bottomContainer} /> */}
         </SafeAreaView>
       </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
@@ -115,19 +159,16 @@ const PhoneNumberPage = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
   },
   topContainer: {
     height: '10%',
     borderBottomEndRadius: 70,
     width: '70%',
-    backgroundColor: '#1996D3',
   },
   bottomContainer: {
     height: '10%',
     width: '70%',
     borderTopLeftRadius: 70,
-    backgroundColor: '#1996D3',
     position: 'absolute',
     right: 0,
     bottom: 0,
@@ -153,12 +194,10 @@ const styles = StyleSheet.create({
     fontSize: 24,
     textAlign: 'start',
     fontWeight: 'bold',
-    color: '#074B7C',
   },
   paraOTP: {
     textAlign: 'start',
     fontSize: 14,
-    color: '#6c757d',
     marginTop: 8,
   },
   inputContainer: {
@@ -168,21 +207,17 @@ const styles = StyleSheet.create({
   input: {
     width: '80%',
     padding: 12,
-    borderBottomColor: '#1996D3',
     borderBottomWidth: 1,
-    backgroundColor: 'white',
     marginBottom: 16,
-    color: '#074B7C',
   },
   sendOtpButton: {
     width: '80%',
     padding: 14,
-    backgroundColor: '#1996D3',
     borderRadius: 12,
     alignItems: 'center',
   },
   sendOtpButtonDisabled: {
-    backgroundColor: '#b0c4de',
+    // Base disabled style
   },
   sendOtpButtonText: {
     color: '#FFFFFF',

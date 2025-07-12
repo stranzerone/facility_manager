@@ -39,7 +39,6 @@ export default GetUuIdForTag = async (id) => {
     //     console.log("navigation created")
 
     //  }
-    console.log(response.data,'for tag')
 
       return response.data;
     } else {

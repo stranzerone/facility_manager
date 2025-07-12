@@ -1,6 +1,6 @@
 // ./app/redux/workOrdersSlice.js
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { GetAllWorkOrders } from '../../service/WorkOrderApis/GetAllWorkOrderApi';
+import { workOrderService } from '../../services/apis/workorderApis';
 
 // Async thunk to fetch work orders for predefined statuses
 export const fetchWorkOrders = createAsyncThunk(
@@ -11,7 +11,7 @@ export const fetchWorkOrders = createAsyncThunk(
 
     try {
       for (const status of filters) {
-        const response = await GetAllWorkOrders(status);
+        const response = await workOrderService.getAllWorkOrders(status);
 
         if (response?.length > 0) {
           allWorkOrders = [...allWorkOrders, ...response];

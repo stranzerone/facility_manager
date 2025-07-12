@@ -1,68 +1,75 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, TextInput, FlatList, Dimensions } from 'react-native';
-import { FontAwesome } from '@expo/vector-icons'; // Import icons from FontAwesome
+import { 
+  View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, TextInput, FlatList 
+} from 'react-native';
+import { FontAwesome } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { usePermissions } from '../GlobalVariables/PermissionsContext';
 
 const SubComplaint = ({ route }) => {
-  const { subCategory } = route.params;
-  const {category} = route.params;
-  const [searchQuery, setSearchQuery] = useState(''); // State for search query
-  const [loading, setLoading] = useState(false); // State for loading indicator
+  const { subCategory, category } = route.params;
+  const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigation = useNavigation();
+  const { nightMode } = usePermissions();
 
-
-  // Filter complaints based on search query
   const filteredComplaints = subCategory.filter(complaint =>
     complaint.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Render a list card for each complaint category
   const renderComplaintCard = ({ item }) => {
-    // Split the complaint name into two parts
     const [firstLine, secondLine] = item.name.split(' (');
-    const firstLetter = firstLine.trim().charAt(0).toUpperCase(); // Get the first letter of the first line
+    const firstLetter = firstLine.trim().charAt(0).toUpperCase();
 
     return (
       <TouchableOpacity
         key={item.id}
-        style={styles.cardContainer}
-        onPress={() => navigation.navigate('complaintInput', { subCategory: item ,category:category})}
+        style={[styles.cardContainer, nightMode && styles.cardContainerDark]}
+        onPress={() => navigation.navigate('complaintInput', { subCategory: item, category })}
       >
-        <View style={styles.circleContainer}>
+        <View style={[styles.circleContainer, nightMode && styles.circleContainerDark]}>
           <Text style={styles.circleText}>{firstLetter}</Text>
         </View>
         <View>
-          <Text style={styles.cardText}>{firstLine.trim()}</Text>
-          {secondLine && <Text style={styles.cardText}>{'(' + secondLine}</Text>}
+          <Text style={[styles.cardText, nightMode && styles.cardTextDark]}>{firstLine.trim()}</Text>
+          {secondLine && <Text style={[styles.cardText, nightMode && styles.cardTextDark]}>{'(' + secondLine}</Text>}
         </View>
       </TouchableOpacity>
     );
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.searchContainer}>
+    <View style={[styles.container, nightMode && styles.containerDark]}>
+      <View style={[styles.searchContainer, nightMode && styles.searchContainerDark]}>
         <TextInput
-          style={styles.searchBar}
+          style={[styles.searchBar, nightMode && styles.searchBarDark]}
           placeholder="Search Sub Category..."
-          placeholderTextColor="#B0B0B0"
+          placeholderTextColor={nightMode ? '#888' : '#B0B0B0'}
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
-        <FontAwesome name="search" size={20} color="#074B7C" style={styles.searchIcon} />
+        <FontAwesome
+          name="search"
+          size={20}
+          color={nightMode ? '#E5E5EA' : '#074B7C'}
+          style={styles.searchIcon}
+        />
       </View>
       {loading ? (
         <ActivityIndicator size="large" color="#1996D3" style={styles.loader} />
       ) : (
         <FlatList
-        key="single-column" // Assign a unique key
-        data={filteredComplaints}
-        renderItem={renderComplaintCard}
-        keyExtractor={(item) => item.id.toString()} // Use id as key
-        ListEmptyComponent={<Text style={styles.noResultsText}>No complaints found.</Text>} // Show when no complaints match the filter
-        showsVerticalScrollIndicator={false} // Hide vertical scroll indicator
-      />
-      
+          key="single-column"
+          data={filteredComplaints}
+          renderItem={renderComplaintCard}
+          keyExtractor={(item) => item.id.toString()}
+          ListEmptyComponent={
+            <Text style={[styles.noResultsText, nightMode && styles.noResultsTextDark]}>
+              No complaints found.
+            </Text>
+          }
+          showsVerticalScrollIndicator={false}
+        />
       )}
     </View>
   );
@@ -71,76 +78,95 @@ const SubComplaint = ({ route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9F9F9', // Light background for the whole view
-    paddingBottom:60,
-    paddingHorizontal:20
-    
-    
-
+    backgroundColor: '#F9F9F9',
+    paddingHorizontal: 20,
+  },
+  containerDark: {
+    backgroundColor: '#121212',
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     marginVertical: 0,
-    paddingHorizontal: 10, // Horizontal padding for the container
-    paddingBottom:15
+    paddingHorizontal: 10,
+    paddingBottom: 15,
+  },
+  searchContainerDark: {
+    borderBottomColor: '#444',
+    borderBottomWidth: 1,
   },
   searchBar: {
     flex: 1,
-    height: 50, // Increased height for better visibility
-    backgroundColor: '#FFFFFF', // White background for the search bar
+    height: 50,
+    backgroundColor: '#FFFFFF',
     borderColor: '#1996D3',
     borderWidth: 1,
     borderRadius: 8,
-    paddingLeft: 40, // Added left padding for space with the icon
+    paddingLeft: 40,
     fontSize: 16,
+    color: '#000',
+  },
+  searchBarDark: {
+    backgroundColor: '#1E1E1E',
+    borderColor: '#444',
+    color: '#E5E5EA',
   },
   searchIcon: {
     position: 'absolute',
-    left: 25, // Position the icon inside the input
-    top: 15, // Center the icon vertically within the TextInput
+    left: 25,
+    top: 15,
   },
   cardContainer: {
-    flexDirection: 'row', // Make items align horizontally
+    flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1996D3', // Primary theme color for the card
+    backgroundColor: '#1996D3',
     borderRadius: 10,
     padding: 10,
     marginBottom: 10,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 5,
   },
+  cardContainerDark: {
+    backgroundColor: '#2C2C2E',
+    shadowOpacity: 0.6,
+  },
   circleContainer: {
-    width: 50, // Width of the circle
-    height: 50, // Height of the circle
-    borderRadius: 25, // Make it circular
-    backgroundColor: '#074B7C', // Dark theme color for the circle
-    justifyContent: 'center', // Center the text vertically
-    alignItems: 'center', // Center the text horizontally
-    marginRight: 10, // Space between circle and text
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#074B7C',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  circleContainerDark: {
+    backgroundColor: '#1565A1',
   },
   circleText: {
-    color: '#FFFFFF', // White color for the letter
-    fontSize: 18, // Font size for the letter
-    fontWeight: 'bold', // Bold weight for the letter
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
   cardText: {
-    color: '#FFFFFF', // White text for better contrast
+    color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: 'bold', // Bold text for emphasis
-    flexWrap: 'wrap', // Ensure text wraps properly
+    fontWeight: 'bold',
+    flexWrap: 'wrap',
+  },
+  cardTextDark: {
+    color: '#E5E5EA',
   },
   noResultsText: {
     fontSize: 16,
     color: '#B0B0B0',
     textAlign: 'center',
     marginTop: 20,
+  },
+  noResultsTextDark: {
+    color: '#888',
   },
   loader: {
     marginTop: 20,

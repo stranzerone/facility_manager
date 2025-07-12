@@ -5,8 +5,9 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import moment from 'moment';
-import { GetFutureWorkOrders } from '../../service/WorkOrderApis/GetFutureWorkOrder';
 import DynamicPopup from '../DynamivPopUps/DynapicPopUpScreen';
+import { workOrderService } from '../../services/apis/workorderApis';
+import { usePermissions } from '../GlobalVariables/PermissionsContext';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -14,7 +15,7 @@ const UpcomingWorkOrdersScreen = ({ navigation }) => {
   const [workOrders, setWorkOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [fromDate, setFromDate] = useState(new Date());
-  const [toDate, setToDate] = useState(moment().add(2, 'days').toDate());
+  const [toDate, setToDate] = useState(moment().add(1, 'days').toDate());
   const [dateType, setDateType] = useState(null);
   const [pickerVisible, setPickerVisible] = useState(false);
   const [modelVisible, setModelVisible] = useState(false);
@@ -23,55 +24,71 @@ const UpcomingWorkOrdersScreen = ({ navigation }) => {
   const [hasMore, setHasMore] = useState(true);
   const [initialLoad, setInitialLoad] = useState(true);
 
-const fetchWorkOrders = async (pageNum = 1, refreshing = false) => {
-  if (!hasMore && !refreshing) return;
+  const { nightMode } = usePermissions();
 
-  if (refreshing) {
-    setPage(1);
-    setHasMore(true);
-    setLoading(true);  // Set loading state to true during refresh
-  } else if (pageNum === 1) {
-    setLoading(true);  // Set loading state to true for initial page fetch
-  }
+  const colors = {
+    background: nightMode ? '#121212' : '#fff',
+    cardBg: nightMode ? '#1e1e1e' : '#fff',
+    text: nightMode ? '#e0e0e0' : '#074B7C',
+    mutedText: nightMode ? '#aaa' : '#555',
+    border: nightMode ? '#2c2c2c' : '#eee',
+    subText: nightMode ? '#bbb' : '#777',
+    headerBg: nightMode ? '#1c1c1c' : '#f9f9f9', // updated
+  };
 
-  try {
-    const formattedFrom = moment(fromDate).format('YYYY-MM-DD');
-    const formattedTo = moment(toDate).format('YYYY-MM-DD');
-    const data = await GetFutureWorkOrders(formattedFrom, formattedTo);
-    const sortedData = data?.sort((a, b) =>
-      moment(a['Due Date']).diff(moment(b['Due Date']))
-    );
-
-    const startIdx = (pageNum - 1) * ITEMS_PER_PAGE;
-    const endIdx = pageNum * ITEMS_PER_PAGE;
-    const paginatedData = sortedData.slice(startIdx, endIdx);
+  const fetchWorkOrders = async (pageNum = 1, refreshing = false) => {
+    if (!hasMore && !refreshing) return;
 
     if (refreshing) {
-      setWorkOrders(paginatedData);
-    } else {
-      setWorkOrders(prev => [...prev, ...paginatedData]);
+      setPage(1);
+      setHasMore(true);
+      setLoading(true);
+    } else if (pageNum === 1) {
+      setLoading(true);
     }
 
-    setHasMore(endIdx < sortedData.length);
-  } catch (err) {
-    console.error('Failed to fetch work orders:', err);
-  } finally {
-    setLoading(false);  // Set loading state to false once data is fetched or error occurs
-    setInitialLoad(false);
-  }
-};
+    try {
+      const formattedFrom = moment(fromDate).format('YYYY-MM-DD');
+      const formattedTo = moment(toDate).format('YYYY-MM-DD');
+      const response = await workOrderService.getFutureWo(formattedFrom, formattedTo);
+
+      const allWorkOrders = response?.data?.flatMap(item => item.workorders || []);
+      const now = moment();
+
+      const sortedData = allWorkOrders
+        .filter(item => moment(item['Due Date']).isSameOrAfter(now))
+        .sort((a, b) => moment(a['Due Date']).diff(moment(b['Due Date'])));
+
+      const startIdx = (pageNum - 1) * ITEMS_PER_PAGE;
+      const endIdx = pageNum * ITEMS_PER_PAGE;
+      const paginatedData = sortedData.slice(startIdx, endIdx);
+
+      if (refreshing) {
+        setWorkOrders(paginatedData);
+      } else {
+        setWorkOrders(prev => [...prev, ...paginatedData]);
+      }
+
+      setHasMore(endIdx < sortedData.length);
+    } catch (err) {
+      console.error('Failed to fetch work orders:', err);
+    } finally {
+      setLoading(false);
+      setInitialLoad(false);
+    }
+  };
+
   useEffect(() => {
     fetchWorkOrders(1, true);
   }, [fromDate, toDate]);
 
   const handleLoadMore = () => {
-    console.log("this is loading",loading)
     if (hasMore) {
       const nextPage = page + 1;
       setPage(nextPage);
       fetchWorkOrders(nextPage);
-    }else{
-      setLoading(false)
+    } else {
+      setLoading(false);
     }
   };
 
@@ -88,42 +105,39 @@ const fetchWorkOrders = async (pageNum = 1, refreshing = false) => {
   };
 
   const renderItem = ({ item }) => (
-    <TouchableOpacity style={styles.card} onPress={() => handleClick(item['Due Date'])}>
+    <TouchableOpacity
+      style={[styles.card, { backgroundColor: colors.cardBg, borderColor: colors.border }]}
+      onPress={() => handleClick(item['Due Date'])}
+    >
       <View style={styles.rowBetween}>
-        <Text style={styles.woNumber}>{item['Sequence No'] || "N/A"}</Text>
+        <Text style={[styles.woNumber, { color: colors.text }]}>{item['Sequence No'] || "N/A"}</Text>
         <Text style={[styles.status, styles.open]}>UPCOMING</Text>
       </View>
 
-      <Text style={styles.title}>{item.Name}</Text>
+      <Text style={[styles.title, { color: colors.text }]}>{item.Name}</Text>
 
       <View style={styles.detailRow}>
-        <Ionicons name="calendar" size={16} color="#074B7C" />
-        <Text style={styles.detailText}>
+        <Ionicons name="calendar" size={16} color={colors.text} />
+        <Text style={[styles.detailText, { color: colors.mutedText }]}>
           Due: {moment(item['Due Date']).format('DD MMM YYYY')}
         </Text>
       </View>
 
       {item.a && (
         <View style={styles.detailRow}>
-          <Ionicons name="cog" size={16} color="#074B7C" />
-          <Text style={styles.detailText}>Asset: {item.a}</Text>
+          <Ionicons name="cog" size={16} color={colors.text} />
+          <Text style={[styles.detailText, { color: colors.mutedText }]}>Asset: {item.a}</Text>
         </View>
       )}
 
       {item.l && (
         <View style={styles.detailRow}>
-          <Ionicons name="location" size={16} color="#074B7C" />
-          <Text style={styles.detailText}>Location: {item.l}</Text>
+          <Ionicons name="location" size={16} color={colors.text} />
+          <Text style={[styles.detailText, { color: colors.mutedText }]}>Location: {item.l}</Text>
         </View>
       )}
     </TouchableOpacity>
   );
-
-  const handleDateSelect = (date) => {
-    if (dateType === 'from') setFromDate(date);
-    else setToDate(date);
-    setPickerVisible(false);
-  };
 
   const renderCustomDatePicker = () => {
     const dates = [];
@@ -173,13 +187,19 @@ const fetchWorkOrders = async (pageNum = 1, refreshing = false) => {
     );
   };
 
+  const handleDateSelect = (date) => {
+    if (dateType === 'from') setFromDate(date);
+    else setToDate(date);
+    setPickerVisible(false);
+  };
+
   return (
-    <View style={styles.container}>
-      <View style={styles.topBar}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.topBar, { backgroundColor: colors.headerBg, borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={22} color="#074B7C" />
+          <Ionicons name="arrow-back" size={22} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.screenTitle}>Upcoming WO</Text>
+        <Text style={[styles.screenTitle, { color: colors.text }]}>Upcoming WO</Text>
         <View style={{ width: 22 }} />
       </View>
 
@@ -212,35 +232,39 @@ const fetchWorkOrders = async (pageNum = 1, refreshing = false) => {
       {pickerVisible && renderCustomDatePicker()}
 
       {initialLoad && loading ? (
-        <ActivityIndicator size="large" color="#074B7C" style={{ marginTop: 50 }} />
+        <ActivityIndicator size="large" color={colors.text} style={{ marginTop: 50 }} />
       ) : (
-<FlatList
-  data={workOrders}
-  keyExtractor={(item, index) => item?.['Sequence No']?.toString() || index.toString()}
-  renderItem={renderItem}
-  contentContainerStyle={{ paddingBottom: 120 }}
-  onEndReached={()=>{setLoading(true); handleLoadMore()}}
-  onEndReachedThreshold={0.3}
-  refreshing={loading}
-  onRefresh={onRefresh}
-  ListEmptyComponent={
-    <View style={styles.emptyContainer}>
-      <Text style={styles.emptyText}>No work orders found for the selected dates</Text>
-      <TouchableOpacity onPress={onRefresh} style={styles.retryButton}>
-        <Ionicons name="refresh" size={20} color="#fff" />
-        <Text style={styles.retryText}>Refresh</Text>
-      </TouchableOpacity>
-    </View>
-  }
-  ListFooterComponent={() =>
-    loading && !initialLoad ? (
-      <View style={styles.footerLoader}>
-        <ActivityIndicator size="small" color="#074B7C" />
-      </View>
-    ) : null
-  }
-/>
-
+        <FlatList
+          data={workOrders}
+          keyExtractor={(item, index) => item?.['Sequence No']?.toString() || index.toString()}
+          renderItem={renderItem}
+          contentContainerStyle={{ paddingBottom: 120 }}
+          onEndReached={() => {
+            setLoading(true);
+            handleLoadMore();
+          }}
+          onEndReachedThreshold={0.3}
+          refreshing={loading}
+          onRefresh={onRefresh}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Text style={[styles.emptyText, { color: colors.subText }]}>
+                No work orders found for the selected dates
+              </Text>
+              <TouchableOpacity onPress={onRefresh} style={styles.retryButton}>
+                <Ionicons name="refresh" size={20} color="#fff" />
+                <Text style={styles.retryText}>Refresh</Text>
+              </TouchableOpacity>
+            </View>
+          }
+          ListFooterComponent={() =>
+            loading && !initialLoad ? (
+              <View style={styles.footerLoader}>
+                <ActivityIndicator size="small" color={colors.text} />
+              </View>
+            ) : null
+          }
+        />
       )}
 
       {modelVisible && (
@@ -259,15 +283,11 @@ const fetchWorkOrders = async (pageNum = 1, refreshing = false) => {
   );
 };
 
-
-
 export default UpcomingWorkOrdersScreen;
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingBottom:70,
-    backgroundColor: '#fff',
   },
   topBar: {
     flexDirection: 'row',
@@ -277,7 +297,6 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
   },
   backButton: {
     padding: 4,
@@ -285,25 +304,22 @@ const styles = StyleSheet.create({
   screenTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#074B7C',
   },
   dateRow: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     paddingVertical: 10,
-    backgroundColor: '#f9f9f9',
   },
   dateBox: {
     width: '49%',
-    display:'flex',
-    flexDirection:"row",
-    gap:4,
-    alignItems:"center",
-    justifyContent:"space-between",
+    display: 'flex',
+    flexDirection: 'row',
+    gap: 4,
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 10,
-    alignItems: 'center',
   },
   dateLabel: {
     color: '#fff',
@@ -314,36 +330,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: 'bold',
   },
-  pickerDrawer: {
-    backgroundColor: '#074B7C22',
-    paddingVertical: 4,
-    height:100,
-    paddingHorizontal: 6,
-  },
-  dateOption: {
- 
-    marginRight: 8,
-    alignItems: 'center',
-     marginVertical:5,
-     marginHorizontal:10
-  },
-  dateOptionText: {
-    fontSize: 12,
-    padding:10,
-    backgroundColor:"#074B7C",
-    borderRadius:200,
-    fontWeight: '600',
-    color: 'white',
-  },
-  dateOptionSub: {
-    fontSize: 12,
-    color: '#555',
-  },
-  listContainer: {
-    paddingBottom: 70,
-  },
   card: {
-    backgroundColor: '#fff',
     padding: 16,
     borderRadius: 14,
     marginVertical: 3,
@@ -353,13 +340,11 @@ const styles = StyleSheet.create({
   rowBetween: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
     marginBottom: 6,
   },
   woNumber: {
     fontWeight: 'bold',
     fontSize: 15,
-    color: '#074B7C',
   },
   status: {
     fontSize: 12,
@@ -376,7 +361,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#333',
     marginBottom: 8,
   },
   detailRow: {
@@ -386,7 +370,6 @@ const styles = StyleSheet.create({
   },
   detailText: {
     marginLeft: 6,
-    color: '#555',
     fontSize: 13,
   },
   emptyContainer: {
@@ -395,7 +378,6 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 14,
-    color: '#777',
     marginBottom: 12,
   },
   retryButton: {
@@ -412,9 +394,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   footerLoader: {
-  paddingBottom: 20,
-  alignItems: 'center',
-  justifyContent: 'center',
-},
-
+    paddingBottom: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });

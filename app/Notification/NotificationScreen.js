@@ -2,14 +2,15 @@ import React, { useEffect, useState } from 'react';
 import { View, FlatList, StyleSheet, Text, ActivityIndicator, RefreshControl } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NotificationCard from './NotificationCard';
-import { GetNotificationsApi } from '../../service/NotificationsApis/GetNotificationsApi';
 import Loader from '../LoadingScreen/AnimatedLoader';
+import { complaintService } from '../../services/apis/complaintApis';
+import { usePermissions } from '../GlobalVariables/PermissionsContext';
 
 const NotificationMainPage = () => {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-
+ const {nightMode}  = usePermissions()
   // Fetch notifications
   const initializeNotifications = async (isRefreshing = false) => {
     if (!isRefreshing) setLoading(true);
@@ -18,7 +19,7 @@ const NotificationMainPage = () => {
     try {
       const userInfo = await AsyncStorage.getItem('userInfo');
       if (userInfo) {
-        const response = await GetNotificationsApi();
+        const response = await complaintService.getMyNotifications();
         setNotifications(response?.data || []);
       }
     } catch (err) {
@@ -38,11 +39,17 @@ const NotificationMainPage = () => {
   );
 
   return (
-    <View style={styles.container}>
+    <View 
+        className={`${nightMode ? "bg-black" : "bg-white"}`}
+
+    style={styles.container}>
       {loading ? (
-        <View style={styles.loaderContainer}>
-          <Loader />
-        </View>
+  <View 
+    className={`flex items-center justify-center flex-1 ${nightMode ? "bg-black" : "bg-white"}`}
+  >
+    <Loader />
+  </View>
+
       ) : (
         <FlatList
           data={notifications}
@@ -66,8 +73,7 @@ const NotificationMainPage = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F7F7F7',
-    paddingBottom: 35,
+    // paddingBottom: 35,
   },
   listContainer: {
     paddingBottom: 20,

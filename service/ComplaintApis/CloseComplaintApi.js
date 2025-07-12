@@ -2,7 +2,7 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL2 } from '@env';
 
-export const CloseComplaintApi = async (data, otp) => {
+export const CloseComplaintApi = async (data) => {
   const userInfo = await AsyncStorage.getItem('userInfo');
 
   if (userInfo) {
@@ -11,29 +11,10 @@ export const CloseComplaintApi = async (data, otp) => {
     const apiToken = parsedUserInfo.data.api_token;
     const societyId = parsedUserInfo.data.societyId;
 
-
     const params = {
       "user-id": userId,
       "api-token": apiToken,
     };
-
-
-let payload
-if(data.ask_otp == -1){
-   payload = {
-    ...data, 
-    status: "Closed",
-   
-  };
-}else{
-
-   payload = {
-    ...data, 
-    status: "Closed",
-    otp
-  };
-}
-
 
     const headers = {
       'Content-Type': 'application/json',
@@ -46,7 +27,7 @@ if(data.ask_otp == -1){
     // const apiUrl = 'https://api.isocietymanager.com/staff/updatecomplaint';
 
     try {
-      const response = await axios.put(`${API_URL2}/staff/updatecomplaint`, payload, { params, headers });
+      const response = await axios.put(`${API_URL2}/staff/updatecomplaint`, data, { params, headers });
       return response.data;
     } catch (error) {
       console.error('Error fetching data:', error);

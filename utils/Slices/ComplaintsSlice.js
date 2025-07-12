@@ -1,12 +1,12 @@
 // ./app/redux/complaintsSlice.js
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { GetAllMyComplaints } from '../../service/ComplaintApis/GetMyAllComplaints';
+import { complaintService } from '../../services/apis/complaintApis';
 
 // Thunk to fetch complaints data
 export const fetchComplaints = createAsyncThunk(
   'complaints/fetchComplaints',
   async () => {
-    const response = await GetAllMyComplaints(); // Call the API function
+    const response = await complaintService.getAllComplaints(); // Call the API function
     return response; // Return the entire response data
   }
 );

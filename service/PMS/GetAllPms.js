@@ -24,7 +24,6 @@ export const GetAllPmsApi = async ({ screen, asset_uuid }) => {
         "site-id": societyId,
       }),
     };
-console.log("this is pms api",screen)
     // If the screen is QR, use a different endpoint and add asset_uuid to params
     if (screen === 'qr') {
       if (!asset_uuid) {

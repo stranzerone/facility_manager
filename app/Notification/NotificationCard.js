@@ -1,50 +1,48 @@
-// NotificationCard.js
-
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import useConvertToIST from '../TimeConvertot/ConvertUtcToIst';
+import { usePermissions } from '../GlobalVariables/PermissionsContext';
+
 const NotificationCard = ({ message, createdAt }) => {
-  
-  
-  
-  
-  
+  const { nightMode } = usePermissions();
+
+  const colors = {
+    background: nightMode ? '#1e1e1e' : '#FFFFFF',
+    message: nightMode ? '#e0e0e0' : '#074B7C',
+    timestamp: nightMode ? '#aaa' : '#999',
+    shadow: '#000',
+  };
+
   return (
-    <View style={styles.card}>
-      <Text style={styles.message}>{message}</Text>
-      <Text style={styles.createdAt}>
-  <Text style={styles.createdAt}>
-    {useConvertToIST(createdAt)}
-</Text>
-</Text>
+    <View style={[styles.card, { backgroundColor: colors.background, shadowColor: colors.shadow }]}>
+      <Text style={[styles.message, { color: colors.message }]}>{message}</Text>
+      <Text style={[styles.createdAt, { color: colors.timestamp }]}>
+        {useConvertToIST(createdAt)}
+      </Text>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth:1,
-    paddingVertical: 20, // Added padding for better spacing
-    paddingHorizontal:12,
-    elevation: 5, // More pronounced shadow effect
-    shadowColor: '#000', // Shadow color for iOS
-    shadowOffset: { width: 0, height: 4 }, // Deeper shadow
-    shadowOpacity: 0.2, // More visible shadow
-    shadowRadius: 6, // More spread out shadow
+    borderBottomWidth: 1,
+    paddingVertical: 20,
+    paddingHorizontal: 12,
+    elevation: 5,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
   },
   message: {
     fontSize: 16,
-    color: '#074B7C', // Dark color for the message text
-    lineHeight: 24, // Improved readability with line height
-    fontWeight: '600', // Semi-bold for better emphasis
+    lineHeight: 24,
+    fontWeight: '600',
   },
   createdAt: {
     fontSize: 12,
-    color: '#999', // Grey color for the timestamp
-    marginTop: 8, // Increased spacing above timestamp
-    alignSelf: 'flex-end', // Aligns the timestamp to the right
-    fontStyle: 'italic', // Italic style for a subtle effect
+    marginTop: 8,
+    alignSelf: 'flex-end',
+    fontStyle: 'italic',
   },
 });
 

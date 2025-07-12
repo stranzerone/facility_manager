@@ -5,7 +5,6 @@ import moment from 'moment';
 
 
 export const GetFutureWorkOrders = async (fromDate, toDate) => {
-console.log("this is future work order api")
 
 //https://nppm-api.isocietymanager.com/v3/workorder/assigned/asset?
   try {
@@ -33,8 +32,8 @@ console.log("this is future work order api")
         from:fromDate,
         to: toDate,
         self_assigned:"true",
-        future_wo:"true"
     };
+
 
     const headers = {
       'Content-Type': 'application/json',

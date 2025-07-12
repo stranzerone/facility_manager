@@ -1,10 +1,10 @@
 // ./app/redux/assetsSlice.js
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import GetAssets from "../../service/AddWorkOrderApis/FetchAssests"
+import { workOrderService } from '../../services/apis/workorderApis';
 
 // Async thunk to fetch assets from an API
 export const fetchAssets = createAsyncThunk('assets/fetchAssets', async () => {
-  const response = await GetAssets(); // Fetch staff data
+  const response = await workOrderService.getAsets(); // Fetch staff data
   return response; // Assumes the response is in JSON format
 });
 

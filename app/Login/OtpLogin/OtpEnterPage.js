@@ -20,6 +20,7 @@ import { useNavigation } from '@react-navigation/native';
 import DynamicPopup from '../../DynamivPopUps/DynapicPopUpScreen';
 import UserCard from '../MultipleUserCards/MultipleUserCards';
 import { LogMeInWithOtp } from '../../../service/LoginWithOtp/LoginMeInWithOtp';
+import { usePermissions } from '../../GlobalVariables/PermissionsContext';
 
 const OtpPage = ({ route }) => {
   const data = route.params.response.data;
@@ -34,6 +35,10 @@ const OtpPage = ({ route }) => {
   const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(false); 
   const navigation = useNavigation();
+  const { nightMode } = usePermissions();
+  
+  // Create dynamic styles based on nightMode
+  const dynamicStyles = createStyles(nightMode);
 
   const handleChangeText = useCallback((text, index) => {
     if (text.length > 1) return;
@@ -88,7 +93,6 @@ const OtpPage = ({ route }) => {
             });
             setPopupVisible(true);
 
-
             navigation.navigate('Login');
           }
         }
@@ -112,35 +116,36 @@ const OtpPage = ({ route }) => {
   };
 
   return (
-    
     <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined} // Adjusts for iOS; use 'height' for Android
+      style={dynamicStyles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+        <SafeAreaView style={dynamicStyles.scrollViewContainer}>
+          <View style={dynamicStyles.topContainer} />
 
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-    <SafeAreaView style={styles.scrollViewContainer}>
-      <View style={styles.topContainer} />
-
- 
-        {/* <ScrollView contentContainerStyle={styles.scrollViewContainer}> */}
-          <View style={styles.imageUriContainer}>
-            <Image source={otpSvg} style={styles.imageUri} resizeMode="contain" />
+          <View style={dynamicStyles.imageUriContainer}>
+            <Image source={otpSvg} style={dynamicStyles.imageUri} resizeMode="contain" />
           </View>
-          <View style={styles.textContainer}>
-            <Text style={styles.headingOTP}>ENTER OTP</Text>
-            <Text style={styles.paraOTP}>
+          
+          <View style={dynamicStyles.textContainer}>
+            <Text style={dynamicStyles.headingOTP}>ENTER OTP</Text>
+            <Text style={dynamicStyles.paraOTP}>
               Please enter the OTP sent to your phone number: {data.phoneNumber}
             </Text>
           </View>
 
-          <View style={styles.inputContainer}>
+          <View style={dynamicStyles.inputContainer}>
             {otp.map((digit, index) => (
               <TextInput
                 key={index}
                 ref={inputRefs[index]}
-                style={[styles.input, activeInputIndex === index && styles.inputActive]}
+                style={[
+                  dynamicStyles.input,
+                  activeInputIndex === index && dynamicStyles.inputActive
+                ]}
                 placeholder="-"
+                placeholderTextColor={nightMode ? '#888' : '#ccc'}
                 keyboardType="number-pad"
                 maxLength={1}
                 value={digit}
@@ -152,57 +157,60 @@ const OtpPage = ({ route }) => {
           </View>
 
           <TouchableOpacity
-            style={[styles.verifyOtpButton,{backgroundColor: attemptsRemaining === 0 ? '#ccc' : '#1996D3'}]}
+            style={[
+              dynamicStyles.verifyOtpButton,
+              { backgroundColor: attemptsRemaining === 0 ? (nightMode ? '#444' : '#ccc') : '#1996D3' }
+            ]}
             onPress={handleVerifyOtp}
             disabled={attemptsRemaining === 0}
           >
-           {loading ? <Text style={styles.verifyOtpButtonText}>verifying</Text> : <Text style={styles.verifyOtpButtonText}>Verify OTP</Text>}
+            {loading ? (
+              <Text style={dynamicStyles.verifyOtpButtonText}>verifying</Text>
+            ) : (
+              <Text style={dynamicStyles.verifyOtpButtonText}>Verify OTP</Text>
+            )}
           </TouchableOpacity>
 
-          <View style={styles.textContainer}>
-            <Text style={styles.attemptsText}>Attempts remaining: {attemptsRemaining}</Text>
+          <View style={dynamicStyles.textContainer}>
+            <Text style={dynamicStyles.attemptsText}>
+              Attempts remaining: {attemptsRemaining}
+            </Text>
           </View>
-        {/* </ScrollView> */}
-              {/* <View style={styles.bottomContainer} /> */}
 
+          {/* Dynamic Popup for OTP Verification */}
+          <DynamicPopup
+            visible={popupVisible}
+            type={popupData.type}
+            message={popupData.message}
+            onClose={() => setPopupVisible(false)}
+            onOk={() => setPopupVisible(false)}
+          />
 
-
-      {/* Dynamic Popup for OTP Verification */}
-      <DynamicPopup
-        visible={popupVisible}
-        type={popupData.type}
-        message={popupData.message}
-        onClose={() => setPopupVisible(false)}
-        onOk={() => setPopupVisible(false)}
-      />
-
-      {/* UserCard Modal for displaying fetched user accounts */}
-      {showUserCard && (
-        <UserCard
-          visible={showUserCard}
-          onClose={() => setShowUserCard(false)}
-          users={userCards}
-          onSelectUser={handleUserSelect}
-        />
-      )}
-    </SafeAreaView>
-    </TouchableWithoutFeedback>
+          {/* UserCard Modal for displaying fetched user accounts */}
+          {showUserCard && (
+            <UserCard
+              visible={showUserCard}
+              onClose={() => setShowUserCard(false)}
+              users={userCards}
+              onSelectUser={handleUserSelect}
+            />
+          )}
+        </SafeAreaView>
+      </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
   );
 };
 
-
-
-const styles = StyleSheet.create({
+const createStyles = (nightMode) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: nightMode ? '#121212' : '#f8f9fa',
   },
   topContainer: {
     height: '10%',
     borderBottomEndRadius: 70,
     width: '100%',
-    backgroundColor: '#1996D3',
+    backgroundColor: nightMode ? '#1996D3' : '#1996D3',
     position: 'absolute',
     top: 0,
     zIndex: 1,
@@ -211,7 +219,7 @@ const styles = StyleSheet.create({
     height: '10%',
     width: '100%',
     borderTopLeftRadius: 70,
-    backgroundColor: '#1996D3',
+    backgroundColor: nightMode ? '#1565C0' : '#1996D3',
     position: 'absolute',
     bottom: 0,
     right: 0,
@@ -226,6 +234,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: '10%',
     paddingBottom: '10%',
+    backgroundColor: nightMode ? '#121212' : '#f8f9fa',
   },
   imageUriContainer: {
     height: '25%',
@@ -237,6 +246,7 @@ const styles = StyleSheet.create({
     width: 150,
     height: 150,
     borderRadius: 20,
+    opacity: nightMode ? 0.9 : 1,
   },
   textContainer: {
     alignItems: 'center',
@@ -246,24 +256,24 @@ const styles = StyleSheet.create({
     fontSize: 24,
     textAlign: 'center',
     fontWeight: 'bold',
-    color: '#074B7C',
+    color: nightMode ? '#FFFFFF' : '#074B7C',
   },
   paraOTP: {
     textAlign: 'center',
     fontSize: 14,
-    color: '#6c757d',
+    color: nightMode ? '#B3B3B3' : '#6c757d',
     marginTop: 8,
   },
   timerText: {
     textAlign: 'center',
     fontSize: 16,
-    color: '#FF5722',
+    color: nightMode ? '#FF7043' : '#FF5722',
     marginTop: 8,
   },
   attemptsText: {
     textAlign: 'center',
     fontSize: 16,
-    color: '#FF5722',
+    color: nightMode ? '#FF7043' : '#FF5722',
     marginTop: 4,
   },
   inputContainer: {
@@ -277,15 +287,21 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderWidth: 1,
-    borderColor: '#1996D3',
+    borderColor: nightMode ? '#444' : '#1996D3',
     borderRadius: 10,
     textAlign: 'center',
     fontSize: 24,
-    backgroundColor: 'white',
+    backgroundColor: nightMode ? '#1E1E1E' : 'white',
+    color: nightMode ? '#FFFFFF' : '#000000',
   },
   inputActive: {
     borderWidth: 2,
-    borderColor: '#1996D3',
+    borderColor: nightMode ? '#1976D2' : '#1996D3',
+    shadowColor: nightMode ? '#1976D2' : '#1996D3',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: nightMode ? 0.3 : 0.2,
+    shadowRadius: 4,
+    elevation: 4,
   },
   verifyOtpButton: {
     width: '80%',
@@ -293,6 +309,11 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     borderRadius: 12,
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: nightMode ? 0.3 : 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   verifyOtpButtonText: {
     color: '#FFFFFF',

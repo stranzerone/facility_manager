@@ -1,16 +1,16 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { getAllUsersApi } from '../../service/GetUsersApi/GetAllUsersApi';
+import { workOrderService } from '../../services/apis/workorderApis';
 
 // Async thunk to fetch all users
 export const fetchAllUsers = createAsyncThunk(
   'allUsers/fetchAllUsers',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await getAllUsersApi();
+      const response = await workOrderService.getAllUsers();
 
       // Ensure the response is converted to an array
-      const usersArray = Array.isArray(response)
-        ? response
+      const usersArray = Array.isArray(response.data)
+        ? response.data
         : Object.values(response); // Converts an object to an array of its values
 
       return usersArray; // Return the array

@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  react-native:
+    build: .
+    volumes:
+      - .:/app
+    environment:
+      - NODE_ENV=development
+    stdin_open: true
+    tty: true

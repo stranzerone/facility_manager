@@ -1,11 +1,10 @@
-import React, { useEffect, useLayoutEffect, useState } from 'react';
+import  {  useLayoutEffect, useState } from 'react';
 import { View, TextInput, TouchableOpacity, Text, StyleSheet, Modal } from 'react-native';
 import * as Progress from 'react-native-progress';
-import { usePermissions } from '../GlobalVariables/PermissionsContext';
-import { MarkAsCompleteApi } from '../../service/BuggyListApis/MarkAsCompleteApi';
 import { useNavigation } from '@react-navigation/native';
-import { CommonActions } from '@react-navigation/native';
 import DynamicPopup from '../DynamivPopUps/DynapicPopUpScreen';
+import { workOrderService } from '../../services/apis/workorderApis';
+import { usePermissions } from '../GlobalVariables/PermissionsContext';
 
 const ProgressPage = ({ data, wo,canComplete,id,sequence,restricted }) => {
   const [remark, setRemark] = useState('');
@@ -14,6 +13,7 @@ const ProgressPage = ({ data, wo,canComplete,id,sequence,restricted }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [canMarkComplete, setCanMarkComplete] = useState(false); // New state to track the button visibility condition
   const [popUp,setPopUp] = useState(false)
+  const {nightMode}  = usePermissions()
   const navigation = useNavigation();
 
 
@@ -59,32 +59,28 @@ if(mandatoryItems.length === manCount){
   }, [data]);
 
 
+
   
   const handleComplete = async () => {
-if(!remark){
+
+   if(!remark){
   alert('Please Enter Remark To Mark As Complete')
 }else{
 
     try {
       setLock(true)
-      const response =  await MarkAsCompleteApi({item:wo, remark:remark,sequence:sequence});
+      setCanMarkComplete(false)
+      const response =  await workOrderService.markAsCompleteWo({item:wo, remark:remark,sequence:sequence});
       setRemark(''); // Reset the remark input
       setModalVisible(false); // Close the modal
 
-
-      if (response) {
+      if (response.status == "success") {
         setPopUp(true)
         setTimeout(() => {
-          if (id) {
             navigation.goBack();
-          } else {
-            navigation.dispatch(
-              CommonActions.reset({
-                index: 0,
-                routes: [{ name: 'Home' }],
-              })
-            );
-          }
+          
+          
+          
         }, 1500); // ⏳ Delay navigation by 2 seconds
       }
       
@@ -100,7 +96,6 @@ if(!remark){
   const progress = data.length > 0 ? count / data.length : 0; // Avoid division by zero
   const progressPercentage = count + '/' + data.length;
   const percentage = (count / data.length) * 100;
-
   return (
     <View style={styles.container}>
       <View style={styles.progressContainer}>
@@ -110,12 +105,13 @@ if(!remark){
             canMarkComplete ?(
             <TouchableOpacity
               className="flex flex-row bg-green-500 gap-1 py-1"
+              
               style={[
                 styles.tickContainer,
                 wo.Status === 'COMPLETED' || restricted && styles.disabledTickContainer, // Apply faint style if completed
               ]}
               onPress={() => wo.Status !== 'COMPLETED' && setModalVisible(true)} // Prevent opening modal if completed
-              disabled={wo.Status === 'COMPLETED' || restricted} // Disable button if completed
+              disabled={restricted} // Disable button if completed
             >
               <Text className="text-white text-xs font-black">{wo.Status === 'COMPLETED' ? 'Completed' : 'Mark As Complete'}</Text>
             </TouchableOpacity>
@@ -133,7 +129,8 @@ if(!remark){
                 <Text className="text-white text-xs font-black">COMPLETED</Text>
               </TouchableOpacity>
 
-               ):null
+               ):
+          null
             )
           }
           <Progress.Circle
@@ -161,29 +158,38 @@ if(!remark){
         onRequestClose={() => setModalVisible(false)} // Close modal on back press
       >
         <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Enter Remark</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Add your remark  250 char"
-              value={remark}
-              onChangeText={setRemark}
-              maxLength={250}
-            />
-            <TouchableOpacity
-           
-              style={styles.completeButton}
-              onPress={handleComplete}
-            >
-              <Text style={styles.completeButtonText}>Mark as Complete</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={() => setModalVisible(false)}
-            >
-              <Text style={styles.closeButtonText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
+        <View style={[styles.modalContent, { backgroundColor: nightMode ? '#1F2937' : '#FFFFFF' }]}>
+  <Text style={[styles.modalTitle, { color: nightMode ? '#F9FAFB' : '#000000' }]}>Enter Remark</Text>
+  <TextInput
+    style={[
+      styles.input,
+      {
+        backgroundColor: nightMode ? '#374151' : '#FFFFFF',
+        color: nightMode ? '#F9FAFB' : '#000000',
+        borderColor: nightMode ? '#4B5563' : '#CCCCCC',
+      },
+    ]}
+    placeholder="Add your remark 250 char"
+    placeholderTextColor={nightMode ? '#9CA3AF' : '#999999'}
+    value={remark}
+    onChangeText={setRemark}
+    maxLength={250}
+  />
+  <TouchableOpacity
+    style={styles.completeButton}
+    onPress={handleComplete}
+    disabled={lock}
+  >
+    <Text style={styles.completeButtonText}>{lock ? "Updating WO" : "Mark as Complete"}</Text>
+  </TouchableOpacity>
+  <TouchableOpacity
+    style={styles.closeButton}
+    onPress={() => setModalVisible(false)}
+  >
+    <Text style={styles.closeButtonText}>Cancel</Text>
+  </TouchableOpacity>
+</View>
+
         </View>
       </Modal>
      
@@ -211,12 +217,13 @@ const styles = StyleSheet.create({
     borderRadius: 50,
   },
   tickContainer: {
-    width: 220,
+    width: 280,
     height: 40,
     marginRight: 10,
     marginTop: 10,
     backgroundColor: '#4CAF50',
-    borderRadius: 25,
+borderTopLeftRadius: 25,
+borderBottomLeftRadius: 25,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',

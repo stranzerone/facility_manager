@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,202 +6,440 @@ import {
   StyleSheet,
   FlatList,
   Modal,
+  ActivityIndicator,
+  Animated,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import FilterOptions from './WorkOrderFilter';
 import WorkOrderCard from './WorkOrderCards';
-import { fetchServiceRequests } from '../../service/FetchWorkOrderApi';
-import {useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import Loader from '../LoadingScreen/AnimatedLoader';
 import { fetchAllUsers } from '../../utils/Slices/UsersSlice';
 import { fetchAllTeams } from '../../utils/Slices/TeamSlice';
-import { useDispatch, useSelector } from 'react-redux'; // Import useSelector to access Redux state
+import { useDispatch, useSelector } from 'react-redux';
 import { usePermissions } from '../GlobalVariables/PermissionsContext';
-import { GetSingleWorkOrders } from '../../service/WorkOrderApis/GetSingleWorkOrderApi';
-import { getLocationWorkOrder } from '../../service/WorkOrderApis/GetLocationWo';
+import { workOrderService } from "../../services/apis/workorderApis";
 
-const WorkOrderPage = ({route}) => {
+// Colors based on nightMode
+const getColors = (nightMode) => ({
+  header: nightMode ? '#2D3748' : '#074B7C',
+  background: nightMode ? '#121212' : '#eceff1',
+  card: nightMode ? '#1e1e1e' : '#ffffff',
+  text: nightMode ? 'gray' : '#074B7C',
+  icon: nightMode ? '#f8f9fa' : '#074B7C',
+  button: nightMode ? '#2a2a2a' : '#f8f9fa',
+  filterBg: nightMode ? '#333' : '#f8f9fa',
+  noDataIcon: nightMode ? '#f8f9fa' : '#074B7C',
+  whiteText: '#ffffff',
+});
 
-  const qrValue = route?.params?.qrValue || null
-  const type = route?.params?.ScreenType || "OW"
-  const wotype = route?.params?.wotype || null
-  const screenType = route?.params?.params ?.screenType || "OW"
+// Animated Work Order Card Component
+const AnimatedWorkOrderCard = ({ workOrder, previousScreen, uuid, isRemoving, onRemoveComplete }) => {
+  const slideAnim = useRef(new Animated.Value(0)).current;
+  const opacityAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (isRemoving) {
+      // Animate card sliding out to the left
+      Animated.parallel([
+        Animated.timing(slideAnim, {
+          toValue: -400, // Slide to left
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacityAnim, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        onRemoveComplete?.();
+      });
+    }
+  }, [isRemoving]);
+
+  return (
+    <Animated.View
+      style={{
+        transform: [{ translateX: slideAnim }],
+        opacity: opacityAnim,
+      }}
+    >
+      <WorkOrderCard 
+        workOrder={workOrder} 
+        previousScreen={previousScreen} 
+        uuid={uuid} 
+      />
+    </Animated.View>
+  );
+};
+
+// New Item Indicator Component
+const NewItemIndicator = ({ isVisible }) => {
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.8)).current;
+
+  useEffect(() => {
+    if (isVisible) {
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          tension: 100,
+          friction: 8,
+          useNativeDriver: true,
+        }),
+      ]).start();
+
+      // Auto hide after 3 seconds
+      setTimeout(() => {
+        Animated.timing(fadeAnim, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }).start();
+      }, 3000);
+    }
+  }, [isVisible]);
+
+  if (!isVisible) return null;
+
+  return (
+    <Animated.View
+      style={[
+        styles.newItemIndicator,
+        {
+          opacity: fadeAnim,
+          transform: [{ scale: scaleAnim }],
+        },
+      ]}
+    >
+      <Icon name="plus-circle" size={16} color="#4CAF50" />
+      <Text style={styles.newItemText}>Refreshed List</Text>
+    </Animated.View>
+  );
+};
+
+const WorkOrderPage = ({ route }) => {
+  const qrValue = route?.params?.qrValue || null;
+  const type = route?.params?.ScreenType || "OW";
+  const wotype = route?.params?.wotype || null;
+  const screenType = route?.params?.params?.screenType || "OW";
+
   const [filterVisible, setFilterVisible] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState('OPEN');
   const [workOrders, setWorkOrders] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [inputNumber, setInputNumber] = useState('');
   const [refreshing, setRefreshing] = useState(false);
-  const [flag, setFlag] = useState(false); // New state to manage flag
-  const navigation = useNavigation();
+  const [flag, setFlag] = useState(false);
+  const [pageNo, setPageNo] = useState(0);
+  const [hasMoreData, setHasMoreData] = useState(true);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [removingItems, setRemovingItems] = useState(new Set());
+  const [showNewItemIndicator, setShowNewItemIndicator] = useState(false);
+const prevQrValueRef = useRef(null);
 
-  const dispatch = useDispatch(); // Use dispatch to dispatch actions
+  const navigation = useNavigation();
+  const dispatch = useDispatch();
   const users = useSelector((state) => state.users.data);
   const teams = useSelector((state) => state.teams.data);
-  const { ppmAsstPermissions,ppmWorkorder } = usePermissions();
+  const { ppmAsstPermissions, ppmWorkorder, nightMode } = usePermissions();
+  const colors = getColors(nightMode);
 
   useEffect(() => {
-    if (!users || !teams || users.length === 0 || teams.length === 0) {
+    if (!users?.length || !teams?.length) {
       dispatch(fetchAllTeams());
-
       dispatch(fetchAllUsers());
     }
   }, []);
 
-  const fetchData = async () => {
-    setLoading(true);
+  const getWorkOrderId = (workOrder) => {
+    return workOrder.wo?.['Sequence No'] || workOrder.id || JSON.stringify(workOrder);
+  };
+
+  const compareWorkOrders = (oldOrders, newOrders) => {
+    const oldIds = new Set(oldOrders.map(getWorkOrderId));
+    const newIds = new Set(newOrders.map(getWorkOrderId));
+    
+    const removedIds = [...oldIds].filter(id => !newIds.has(id));
+    const addedOrders = newOrders.filter(order => !oldIds.has(getWorkOrderId(order)));
+    
+    return { removedIds, addedOrders };
+  };
+
+  const fetchData = async (page = 0, isLoadMore = false) => {
+    if (isLoadMore) {
+      setLoadingMore(true);
+    } else if (isInitialLoad) {
+      setLoading(true);
+    }
+
     try {
       let response = null;
-      if(qrValue){
-      switch (screenType) {
-        case "OW":
-          if(wotype === "AS"){
-          response = await GetSingleWorkOrders(qrValue,selectedFilter, false);
-          setWorkOrders(response || []);
-          }else{
-        const    responseBD = await getLocationWorkOrder(qrValue,selectedFilter, true);
-        const     responseWo = await getLocationWorkOrder(qrValue,selectedFilter, false);
-        const response = [...responseWo,...responseBD]
-            setWorkOrders(response || []);
-
+      if (qrValue) {
+        switch (screenType) {
+          case "OW":
+            if (wotype === "AS") {
+              const bd = await workOrderService.getAssetWorkOrder(qrValue, selectedFilter, true, page);
+              const wo = await workOrderService.getAssetWorkOrder(qrValue, selectedFilter, false, page);
+              const merged = [...wo.data, ...bd.data];
+              
+              if (isLoadMore) {
+                setWorkOrders(prev => [...prev, ...merged]);
+              } else {
+                handleDataUpdate(merged || []);
+              }
+              
+              setHasMoreData(merged.length === 10);
+            } else {
+              const bd = await workOrderService.getLocationWorkOrder(qrValue, selectedFilter, true, page);
+              const wo = await workOrderService.getLocationWorkOrder(qrValue, selectedFilter, false, page);
+              const merged = [...wo.data, ...bd.data];
+              
+              if (isLoadMore) {
+                setWorkOrders(prev => [...prev, ...merged]);
+              } else {
+                handleDataUpdate(merged || []);
+              }
+              
+              setHasMoreData(merged.length === 10);
+            }
+            break;
+          case "ME":
+            response = await getEscalations(page);
+            break;
+        }
+        if (response) {
+          if (isLoadMore) {
+            setWorkOrders(prev => [...prev, ...(response || [])]);
+          } else {
+            handleDataUpdate(response || []);
           }
-          break;
- 
-        case "ME":
-          response = await getEscalations();
-          break;
-        default:
-          console.warn("Invalid type");
-          break;
+          setHasMoreData(response?.length === 10 || response?.length === 20);
+        }
+      } else {
+        if (screenType === "OW") {
+          response = await workOrderService.getAllWorkOrders(selectedFilter, flag, page);
+          if (isLoadMore) {
+            setWorkOrders(prev => [...prev, ...(response.data || [])]);
+          } else {
+            handleDataUpdate(response.data || []);
+          }
+          
+          setHasMoreData(response.data?.length === 20);
+        }
       }
-  
-      if (response) {
-        setData(response || []);
-      }
-
-
-    }else{
-
-switch (screenType) {
-      case "OW":
-        response = await fetchServiceRequests(selectedFilter);
-        console.log(response,'this is the response')
-        setWorkOrders(response || []);
-
-        break;
-
-     
-
-    }
-    }
     } catch (err) {
-      setError(err.message || "Something went wrong");
+      console.error("Error fetching data:", err.message || "Something went wrong");
     } finally {
       setLoading(false);
+      setLoadingMore(false);
       setRefreshing(false);
+      setIsInitialLoad(false);
     }
   };
-  useEffect(() => {
 
-    if (type) {
-      fetchData();
+  const handleDataUpdate = (newData) => {
+    if (isInitialLoad) {
+      setWorkOrders(newData);
+      return;
     }
-  }, [type, selectedFilter, flag,qrValue]);
-  
+
+    const { removedIds, addedOrders } = compareWorkOrders(workOrders, newData);
+
+    // Handle removed items with animation
+    if (removedIds.length > 0) {
+      setRemovingItems(new Set(removedIds));
+      
+      // After animation completes, update the data
+      setTimeout(() => {
+        setWorkOrders(newData);
+        setRemovingItems(new Set());
+      }, 300);
+    } else {
+      // No items removed, just update normally
+      setWorkOrders(newData);
+    }
+
+    // Show indicator for new items
+    if (addedOrders.length > 0 && !isInitialLoad) {
+      setShowNewItemIndicator(true);
+      setTimeout(() => setShowNewItemIndicator(false), 3000);
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      setPageNo(0);
+      setHasMoreData(true);
+      fetchData(0, false);
+    }, [qrValue, wotype, flag, selectedFilter])
+  );
+useEffect(() => {
+  if (prevQrValueRef.current !== qrValue) {
+    prevQrValueRef.current = qrValue;
+    setLoading(true); // Show loader
+    setWorkOrders([]); // Clear old data
+    setPageNo(0);
+    setHasMoreData(true);
+    setIsInitialLoad(true);
+    fetchData(0, false);
+  }
+}, [qrValue]);
 
 
-
-
-
-  const permissionToAdd = ppmWorkorder.some((permission) => permission.includes('C'))
-
+  const permissionToAdd =
+    ppmWorkorder.some((p) => p.includes('C')) &&
+    (ppmAsstPermissions?.some((p) => p.includes('R')) || qrValue);
 
   const applyFilter = (filter) => {
     setSelectedFilter(filter);
     setFilterVisible(false);
+    setPageNo(0);
+    setHasMoreData(true);
+    setIsInitialLoad(true); // Reset initial load state for new filter
   };
 
-  const filteredWorkOrders = screenType !== "UW" && inputNumber
-  ? workOrders?.filter(
-      (order) =>
-        order.wo['Sequence No'].includes(inputNumber)
-    )
-  : workOrders;
+  const filteredWorkOrders =
+    screenType !== "UW" && inputNumber
+      ? workOrders?.filter((order) =>
+          order.wo['Sequence No'].includes(inputNumber)
+        )
+      : workOrders;
 
-
-  // Pull-to-refresh handler
   const onRefresh = () => {
     setRefreshing(true);
-    fetchData();
+    setPageNo(0);
+    setHasMoreData(true);
+    fetchData(0, false);
   };
 
   const toggleFlag = () => {
-    setFlag((prevFlag) => !prevFlag); // Toggle the flag between true and false
+    setFlag((prev) => !prev);
+    setPageNo(0);
+    setHasMoreData(true);
+    setIsInitialLoad(true);
+  };
+
+  const handleLoadMore = () => {
+    if (!loadingMore && hasMoreData && workOrders.length > 0) {
+      const nextPage = pageNo + 1;
+      setPageNo(nextPage);
+      fetchData(nextPage, true);
+    }
+  };
+
+  const renderFooter = () => {
+    if (!loadingMore) return null;
+    
+    return (
+      <View style={styles.footerLoader}>
+        <ActivityIndicator size="small" color={colors.icon} />
+        <Text style={[styles.loadingText, { color: colors.text }]}>Loading more...</Text>
+      </View>
+    );
+  };
+
+  const renderWorkOrderItem = ({ item, index }) => {
+    const itemId = getWorkOrderId(item);
+    const isRemoving = removingItems.has(itemId);
+    
+    return (
+      <AnimatedWorkOrderCard
+        workOrder={item}
+        previousScreen="Work Orders"
+        uuid={qrValue}
+        isRemoving={isRemoving}
+        onRemoveComplete={() => {
+          // This will be called when animation completes
+        }}
+      />
+    );
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View className="flex flex-row items-center justify-between p-3 mt-1 rounded-md shadow-md"
+        style={{ backgroundColor: colors.header }}>
+        {/* Left: Flag & Filter */}
+        <View className="flex flex-row items-center space-x-3">
+          <TouchableOpacity
+            style={[styles.button, { backgroundColor: colors.button, borderColor: 'gray' }]}
+            onPress={toggleFlag}
+          >
+            <Icon name="flag" size={17} color={flag ? 'red' : colors.icon} />
+          </TouchableOpacity>
 
-      {/* Search Input */}
-      <View className="flex flex-row items-center justify-between p-3 mt-1 bg-[#074B7C] rounded-md shadow-md">
-  {/* Left Side: Flag & Filter */}
-  <View className="flex flex-row items-center space-x-3">
-    {/* Flag Button */}
-    <TouchableOpacity
-      className="py-1 px-2 rounded-md border border-gray-400 bg-[#f8f9fa] shadow-md flex items-center justify-center"
-      onPress={toggleFlag}
-    >
-      <Icon name="flag" size={17} color={flag ? 'red' : '#074B7C'} />
-    </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => setFilterVisible(true)}
+            style={[styles.button, { backgroundColor: colors.filterBg }]}
+          >
+            <Icon name="filter" size={17} color={colors.icon} />
+            <Text style={{ color: colors.icon, marginLeft: 5 }}>Filter</Text>
+          </TouchableOpacity>
+        </View>
 
-    {/* Filter Button */}
-    <TouchableOpacity
-      onPress={() => setFilterVisible((prev) => !prev)}
-      className="flex flex-row  items-center px-2 py-1 bg-[#f8f9fa] rounded-md shadow-md"
-    >
-      <Icon name="filter" size={17} color="#074B7C" className="mr-2" />
-      <Text className="text-[#074B7C] font-semibold">Filter</Text>
-    </TouchableOpacity>
-  </View>
+        {/* Center: Status */}
+        <Text style={{ color: colors.whiteText, fontWeight: '600', fontSize: 18 }}>{selectedFilter}</Text>
 
-  {/* Center: Current Status */}
-  <Text className="text-white font-semibold text-lg">{selectedFilter}</Text>
+        {/* Right: Add Button */}
+        {ppmWorkorder.some((p) => p.includes('C')) && (
+          <TouchableOpacity
+            onPress={() =>
+              navigation.navigate('AddWo', {
+                qr: "no",
+                type: null,
+                screenType,
+                uuid: qrValue,
+              })
+            }
+            disabled={!permissionToAdd}
+            style={[
+              styles.button,
+              {
+                backgroundColor: permissionToAdd ? '#fff' : '#ccc',
+                flexDirection: 'row',
+              },
+            ]}
+          >
+            <Icon name="plus" size={17} color={permissionToAdd ? '#074B7C' : 'gray'} />
+            <Text style={{ marginLeft: 5, color: permissionToAdd ? '#074B7C' : 'gray' }}>
+              Add
+            </Text>
+          </TouchableOpacity>
+        )}
+      </View>
 
-  {/* Right Side: Add Button */}
-  {ppmWorkorder.some((permission) => permission.includes('C')) && (
-    <TouchableOpacity
-      onPress={() => navigation.navigate('AddWo', { qr: "no", type: null, screenType:screenType , uuid: qrValue })}
-      className={`flex flex-row items-center px-4 py-1 rounded-md shadow-md ${
-        permissionToAdd ? 'bg-white' : 'bg-gray-300'
-      }`}
-      disabled={!permissionToAdd}
-    >
-      <Icon name="plus" size={17} color={permissionToAdd ? '#074B7C' : 'gray'} className="mr-2" />
-      <Text className={`font-semibold ${permissionToAdd ? 'text-[#074B7C]' : 'text-gray-500'}`}>
-        Add
-      </Text>
-    </TouchableOpacity>
-  )}
-</View>
+      {/* New Item Indicator */}
+      <NewItemIndicator isVisible={showNewItemIndicator} />
 
-      {/* Content */}
-      {loading ? (
+      {loading && isInitialLoad ? (
         <View style={styles.loaderContainer}>
           <Loader />
         </View>
-      ) : workOrders.length === 0 || filteredWorkOrders.length === 0 ? (
+      ) : filteredWorkOrders.length === 0 ? (
         <View style={styles.noRecordsContainer}>
-          <Icon name="exclamation-circle" size={50} color="#074B7C" />
-          <Text style={styles.noRecordsText}>No Work Order Found</Text>
+          <Icon name="exclamation-circle" size={50} color={colors.noDataIcon} />
+          <Text style={[styles.noRecordsText, { color: colors.noDataIcon }]}>No Work Order Found</Text>
         </View>
       ) : (
         <FlatList
           data={filteredWorkOrders}
-          keyExtractor={(item,index) => index.toString()}
-          renderItem={({ item }) => <WorkOrderCard workOrder={item} previousScreen="Work Orders" uuid={qrValue} />}
+          keyExtractor={(item, index) => `${getWorkOrderId(item)}-${index}`}
+          renderItem={renderWorkOrderItem}
           contentContainerStyle={styles.contentContainer}
           refreshing={refreshing}
           onRefresh={onRefresh}
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.1}
+          ListFooterComponent={renderFooter}
+          removeClippedSubviews={false} // Prevent issues with animations
         />
       )}
 
@@ -228,82 +466,6 @@ switch (screenType) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
-    paddingBottom: 70,
-  },
-  headerContainer: {
-    backgroundColor: '#074B7C',
-    paddingVertical: 10,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 10,
-  },
-  statusButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 0,
-    borderBottomLeftRadius: 0,
-    paddingVertical: 5,
-    width: 100,
-    paddingHorizontal: 10,
-    borderRadius: 20,
-  },
-  statusButtonText: {
-    marginLeft: 8,
-    fontWeight: 'bold',
-    color: '#000',
-  },
-  statusTextContainer: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  statusText: {
-    fontWeight: '900',
-    fontSize: 16,
-    color: '#fff',
-  },
-  addButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    width: 90,
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    borderRadius: 20,
-    borderTopRightRadius: 0,
-    borderBottomRightRadius: 0,
-  },
-  addButtonText: {
-    marginLeft: 8,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  searchIcon: {
-    color: '#074B7C',
-  },
-  numberInput: {
-    height: 40,
-    borderColor: '#ccc',
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    backgroundColor: '#fff',
-    width: '75%',
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent:"flex-end",
-    gap: 10,
-    paddingHorizontal: 25,
-    paddingTop: 10,
-  },
-  flagButton: {
-    paddingHorizontal: 10,
-    paddingVertical: 8,
   },
   loaderContainer: {
     flex: 1,
@@ -314,17 +476,58 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     marginBottom: 30,
-    marginTop: 0,
     alignItems: 'center',
   },
   noRecordsText: {
     fontSize: 18,
-    color: '#074B7C',
     marginTop: 20,
     fontWeight: 'bold',
   },
   contentContainer: {
     paddingHorizontal: 15,
+  },
+  button: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  footerLoader: {
+    paddingVertical: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    marginTop: 8,
+    fontSize: 14,
+  },
+  newItemIndicator: {
+    position: 'absolute',
+    top: 80,
+    right: 20,
+    backgroundColor: '#E8F5E8',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    zIndex: 1000,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  newItemText: {
+    color: '#4CAF50',
+    fontSize: 12,
+    fontWeight: '600',
+    marginLeft: 6,
   },
 });
 
