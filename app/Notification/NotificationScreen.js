@@ -39,7 +39,10 @@ const NotificationMainPage = () => {
   );
 
   return (
-    <View style={styles.container}>
+    <View 
+        className={`${nightMode ? "bg-black" : "bg-white"}`}
+
+    style={styles.container}>
       {loading ? (
   <View 
     className={`flex items-center justify-center flex-1 ${nightMode ? "bg-black" : "bg-white"}`}
@@ -70,7 +73,6 @@ const NotificationMainPage = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F7F7F7',
     // paddingBottom: 35,
   },
   listContainer: {

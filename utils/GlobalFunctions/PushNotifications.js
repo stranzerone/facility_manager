@@ -47,8 +47,7 @@ const onesignalInitalize = async () => {
   // Get OneSignal ID and External ID
   await getOneSignalId();
   await getExternalId();
-  OneSignal.SetLogLevel(OneSignal.LOG_LEVEL.DEBUG, OneSignal.LOG_LEVEL.DEBUG);
-
+OneSignal.setLogLevel(LogLevel.Debug, LogLevel.Debug);
   // Check notification permissions (optional)
   const permissionStatus = await OneSignal.Notifications.getPermissionAsync();
 };

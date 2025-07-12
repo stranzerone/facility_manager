@@ -10,6 +10,7 @@ import {
   StatusBar,
   useColorScheme,
   Animated,
+  TouchableOpacity,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { usePermissions } from "../GlobalVariables/PermissionsContext";
@@ -208,6 +209,7 @@ const TechnicianDashboard = () => {
       route: "MyWorkOrders",
       active: false,
     },
+
   ];
   
   const handlePressIn = (key) => {
@@ -614,7 +616,25 @@ const getOpenWoLength = async () => {
             </Pressable>
           ))}
         </View>
+
       </ScrollView>
+       <View className="absolute bottom-10 w-full items-center">
+        <TouchableOpacity onPress={() => navigation.navigate("QRCode")} className="flex-row items-center px-4 py-3 rounded-2xl bg-[#1996D3] shadow-md">
+        {/* QR Icon */}
+        <View className="bg-gray-200 p-1 rounded-full ">
+        <Feather name="camera" size={24} color="#1996D3" />
+
+        </View>
+
+        {/* Spacer */}
+        <View className="w-3" />
+
+        {/* Label */}
+        <Text className="text-white text-base font-black">
+          Click here to Scan
+        </Text>
+      </TouchableOpacity>
+    </View>
     </View>
   );
 };

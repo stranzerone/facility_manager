@@ -140,7 +140,7 @@ const CustomTabBar = ({ state, descriptors, navigation, showOfflineIndicator, is
     { key: 'Home', icon: faHome, label: 'Home' },
     { key: 'ServiceRequests', icon: faFileAlt, label: 'Complaints' },
     { key: 'QRCode', icon: faQrcode, label: '', isCenter: true },
-    { key: 'Notifications', icon: faBell, label: 'Notifications' },
+    { key: 'Notifications', icon: faBell, label: 'Notification' },
     { key: 'More', icon: faEllipsisH, label: 'More' },
   ];
 
@@ -413,10 +413,11 @@ const MainNavigation = () => {
 
   return (
     <SafeAreaProvider style={{ backgroundColor: isDarkMode ? '#111827' : '#F9FAFB' }}>
-      <StatusBar
-        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-        backgroundColor={isDarkMode ? '#1F2937' : '#FFFFFF'}
-      />
+     <StatusBar
+  barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+  translucent={true}
+/>
+
       <SafeAreaView edges={['top']} style={{ backgroundColor: isDarkMode ? '#1F2937' : '#FFFFFF' }}>
         <Header
           onThemeToggle={handleThemeToggle}

@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   FlatList,
+  Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import QrScanner from "./QrScannerComp";
@@ -136,15 +137,14 @@ const [refreshKey, setRefreshKey] = useState(0);
           <QrScanner screenType={route?.params?.screenType || "OW"} />
         </View>
 
-        <View className="flex flex-col items-center justify-center">
+     {Platform.OS == "android" &&   <View className="flex flex-col items-center justify-center">
           <Ionicons name="qr-code-outline" size={100} color={colors.icon} />
           <Text className="mt-24" style={[styles.instructions, { color: colors.text }]}>
             Scan QR code or select asset from above
           </Text>
-        </View>
+        </View>}
       </View>
 
-      <View></View>
     </View>
   );
 }

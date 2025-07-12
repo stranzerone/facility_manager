@@ -153,8 +153,8 @@ const Header = ({ siteLogo, user }) => {
 const styles = StyleSheet.create({
   headerWrapper: {
     position: 'relative',
-    height: Platform.OS === 'ios' ? 88 : 64, // Adjusted height for iOS status bar area
-    paddingTop: Platform.OS === 'ios' ? 24 : 0, // Padding for iOS status bar
+    height: Platform.OS === 'ios' ? 60 : 64, // Adjusted height for iOS status bar area
+    paddingTop: Platform.OS === 'ios' ? 4 : 0, // Padding for iOS status bar
   },
   // gradientBackground: { // This style is defined but not used in the JSX
   //   position: 'absolute',
